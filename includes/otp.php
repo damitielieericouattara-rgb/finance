@@ -33,27 +33,27 @@ function sendOTP($email, $type = 'registration') {
         $insertStmt->execute([$email, $code, $type, $expiresAt]);
         
         // Envoyer l'email
-        $subject = $type === 'registration' 
-            ? "Code de vérification - " . SITE_NAME 
-            : "Code de réinitialisation - " . SITE_NAME;
+        $subject = ($type === 'registration') 
+            ? "Code de verification - " . SITE_NAME 
+            : "Code de reinitialisation - " . SITE_NAME;
         
         $body = getOTPEmailTemplate($code, $type);
         
         if (sendEmail($email, $subject, $body, true)) {
-            return [
+            return array(
                 'success' => true,
-                'message' => 'Un code de vérification a été envoyé à votre adresse email.'
-            ];
+                'message' => "Un code de verification a ete envoye a votre adresse email."
+            );
         } else {
             throw new Exception("Erreur lors de l'envoi de l'email");
         }
         
     } catch (Exception $e) {
         error_log("Erreur sendOTP: " . $e->getMessage());
-        return [
+        return array(
             'success' => false,
-            'message' => 'Une erreur est survenue lors de l'envoi du code.'
-        ];
+            'message' => "Une erreur est survenue lors de l'envoi du code."
+        );
     }
 }
 
@@ -80,23 +80,23 @@ function verifyOTP($email, $code, $type = 'registration') {
             ");
             $updateStmt->execute([$verification['id']]);
             
-            return [
+            return array(
                 'success' => true,
-                'message' => 'Code vérifié avec succès.'
-            ];
+                'message' => "Code verifie avec succes."
+            );
         } else {
-            return [
+            return array(
                 'success' => false,
-                'message' => 'Code invalide ou expiré.'
-            ];
+                'message' => "Code invalide ou expire."
+            );
         }
         
     } catch (Exception $e) {
         error_log("Erreur verifyOTP: " . $e->getMessage());
-        return [
+        return array(
             'success' => false,
-            'message' => 'Une erreur est survenue lors de la vérification.'
-        ];
+            'message' => "Une erreur est survenue lors de la verification."
+        );
     }
 }
 
@@ -126,10 +126,13 @@ function isEmailVerified($email, $type = 'registration') {
  * Template HTML pour l'email OTP
  */
 function getOTPEmailTemplate($code, $type) {
-    $title = $type === 'registration' ? 'Vérification de votre email' : 'Réinitialisation de mot de passe';
-    $message = $type === 'registration' 
-        ? 'Bienvenue ! Veuillez utiliser le code ci-dessous pour vérifier votre adresse email et activer votre compte.'
-        : 'Vous avez demandé la réinitialisation de votre mot de passe. Utilisez le code ci-dessous pour continuer.';
+    $title = ($type === 'registration') ? 'Verification de votre email' : 'Reinitialisation de mot de passe';
+    $message = ($type === 'registration') 
+        ? 'Bienvenue ! Veuillez utiliser le code ci-dessous pour verifier votre adresse email et activer votre compte.'
+        : 'Vous avez demande la reinitialisation de votre mot de passe. Utilisez le code ci-dessous pour continuer.';
+    
+    $siteName = defined('SITE_NAME') ? SITE_NAME : 'Gestion Financiere';
+    $currentYear = date('Y');
     
     return "
     <!DOCTYPE html>
@@ -209,7 +212,7 @@ function getOTPEmailTemplate($code, $type) {
                 <p>{$message}</p>
                 
                 <div class='otp-code'>
-                    <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 14px;'>Votre code de vérification :</p>
+                    <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 14px;'>Votre code de verification :</p>
                     <div class='code'>{$code}</div>
                 </div>
                 
@@ -218,21 +221,21 @@ function getOTPEmailTemplate($code, $type) {
                     <ul style='margin: 10px 0; padding-left: 20px;'>
                         <li>Ce code expire dans <strong>10 minutes</strong></li>
                         <li>Ne partagez jamais ce code avec qui que ce soit</li>
-                        <li>Si vous n'avez pas demandé ce code, ignorez cet email</li>
+                        <li>Si vous n avez pas demande ce code, ignorez cet email</li>
                     </ul>
                 </div>
                 
                 <p style='margin-top: 30px;'>
-                    Si vous avez des questions, n'hésitez pas à nous contacter.
+                    Si vous avez des questions, n hesitez pas a nous contacter.
                 </p>
             </div>
             
             <div class='footer'>
                 <p style='margin: 0;'>
-                    © " . date('Y') . " " . SITE_NAME . ". Tous droits réservés.
+                    © {$currentYear} {$siteName}. Tous droits reserves.
                 </p>
                 <p style='margin: 10px 0 0 0;'>
-                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+                    Cet email a ete envoye automatiquement, merci de ne pas y repondre.
                 </p>
             </div>
         </div>
