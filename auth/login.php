@@ -11,12 +11,52 @@ if (isLoggedIn()) {
     exit();
 }
 
+// Vérifier le cookie "Se souvenir de moi"
+if (!isLoggedIn() && isset($_COOKIE['remember_token'])) {
+    try {
+        $db = getDB();
+        $token = cleanInput($_COOKIE['remember_token']);
+        
+        $stmt = $db->prepare("
+            SELECT u.*, r.name as role_name 
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id 
+            WHERE u.remember_token = ? AND u.remember_expires > NOW() AND u.is_active = 1
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch();
+        
+        if ($user) {
+            // Connexion automatique
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['role'] = $user['role_name'];
+            $_SESSION['role_id'] = $user['role_id'];
+            $_SESSION['LAST_ACTIVITY'] = time();
+            
+            logActivity($user['id'], 'AUTO_LOGIN', 'users', $user['id'], 'Connexion automatique via remember token');
+            
+            if ($user['role_name'] === 'admin') {
+                header('Location: ../admin/dashboard.php');
+            } else {
+                header('Location: ../user/dashboard.php');
+            }
+            exit();
+        }
+    } catch (Exception $e) {
+        error_log("Erreur remember me: " . $e->getMessage());
+    }
+}
+
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = cleanInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $selectedRole = cleanInput($_POST['role'] ?? '');
+    $rememberMe = isset($_POST['remember']) && $_POST['remember'] === 'on';
     
     if (empty($email) || empty($password)) {
         $error = 'Veuillez remplir tous les champs';
@@ -39,6 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($user['role_name'] !== $selectedRole) {
                     $error = 'Le rôle sélectionné ne correspond pas à votre compte';
                     logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative avec mauvais rôle pour: $email");
+                } elseif ($user['email_verified'] == 0) {
+                    $error = 'Veuillez vérifier votre adresse email avant de vous connecter';
                 } else {
                     // Connexion réussie
                     $_SESSION['user_id'] = $user['id'];
@@ -48,6 +90,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['role'] = $user['role_name'];
                     $_SESSION['role_id'] = $user['role_id'];
                     $_SESSION['LAST_ACTIVITY'] = time();
+                    
+                    // Gérer "Se souvenir de moi"
+                    if ($rememberMe) {
+                        $rememberToken = bin2hex(random_bytes(32));
+                        $rememberExpires = date('Y-m-d H:i:s', time() + REMEMBER_ME_EXPIRY);
+                        
+                        // Sauvegarder dans la base
+                        $updateStmt = $db->prepare("
+                            UPDATE users 
+                            SET remember_token = ?, remember_expires = ? 
+                            WHERE id = ?
+                        ");
+                        $updateStmt->execute([$rememberToken, $rememberExpires, $user['id']]);
+                        
+                        // Créer le cookie sécurisé
+                        setcookie(
+                            'remember_token',
+                            $rememberToken,
+                            time() + REMEMBER_ME_EXPIRY,
+                            '/',
+                            '',
+                            isset($_SERVER['HTTPS']),
+                            true // HttpOnly
+                        );
+                    }
                     
                     // Mettre à jour la dernière connexion
                     $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
@@ -76,15 +143,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-br from-green-50 to-green-100 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full mx-4">
+<body class="bg-gradient-to-br from-green-50 to-green-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
         <!-- Logo et titre -->
         <div class="text-center mb-8">
             <div class="flex justify-center mb-4">
@@ -121,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="radio" name="role" value="admin" required
                                        class="peer sr-only"
                                        <?php echo (($_POST['role'] ?? '') === 'admin') ? 'checked' : ''; ?>>
-                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 transition">
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 transition hover:border-purple-300">
                                     <svg class="mx-auto h-8 w-8 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                     </svg>
@@ -132,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="radio" name="role" value="user" required
                                        class="peer sr-only"
                                        <?php echo (($_POST['role'] ?? '') === 'user') ? 'checked' : ''; ?>>
-                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 transition">
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 transition hover:border-green-300">
                                     <svg class="mx-auto h-8 w-8 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                     </svg>
@@ -189,25 +256,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </a>
                 </p>
             </div>
-
-            <!-- Comptes de test -->
-            <!-- <div class="mt-6 pt-6 border-t border-gray-200">
-                <p class="text-xs text-gray-500 text-center mb-3">Comptes de test disponibles :</p>
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200">
-                        <p class="font-semibold text-purple-700 mb-1">👑 Admin</p>
-                        <p class="text-gray-600">admin@financialapp.com</p>
-                        <p class="text-gray-600">Admin@123</p>
-                        <p class="text-purple-600 text-[10px] mt-1">Rôle: Administrateur</p>
-                    </div>
-                    <div class="bg-green-50 p-3 rounded-lg border border-green-200">
-                        <p class="font-semibold text-green-700 mb-1">👤 User</p>
-                        <p class="text-gray-600">user1@financialapp.com</p>
-                        <p class="text-gray-600">User@123</p>
-                        <p class="text-green-600 text-[10px] mt-1">Rôle: Utilisateur</p>
-                    </div>
-                </div>
-            </div> -->
         </div>
 
         <div class="text-center mt-6">

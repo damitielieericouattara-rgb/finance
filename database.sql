@@ -1,5 +1,5 @@
 -- ========================================
--- SCHÉMA BASE DE DONNÉES - VERSION CORRIGÉE
+-- SCHÉMA BASE DE DONNÉES - VERSION CORRIGÉE ET COMPLÈTE
 -- Application de Gestion Financière
 -- ========================================
 
@@ -22,7 +22,7 @@ INSERT INTO roles (name, description) VALUES
 ON DUPLICATE KEY UPDATE description=VALUES(description);
 
 -- ========================================
--- TABLE DES UTILISATEURS
+-- TABLE DES UTILISATEURS - AJOUT TÉLÉPHONES
 -- ========================================
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -31,32 +31,47 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     role_id INT NOT NULL DEFAULT 2,
+    phone VARCHAR(20) NULL COMMENT 'Numéro joignable pour SMS',
+    whatsapp VARCHAR(20) NULL COMMENT 'Numéro WhatsApp',
     is_active TINYINT(1) DEFAULT 1,
+    email_verified TINYINT(1) DEFAULT 0,
     last_login TIMESTAMP NULL,
     reset_token VARCHAR(255) NULL,
     reset_token_expires TIMESTAMP NULL,
+    remember_token VARCHAR(255) NULL,
+    remember_expires TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE RESTRICT,
     INDEX idx_email (email),
     INDEX idx_username (username),
-    INDEX idx_reset_token (reset_token)
+    INDEX idx_reset_token (reset_token),
+    INDEX idx_remember_token (remember_token)
+) ENGINE=InnoDB;
+
+-- Mot de passe : Admin@123 et User@123
+INSERT INTO users (username, email, password, full_name, role_id, is_active, email_verified, phone, whatsapp) VALUES
+('admin', 'admin@financialapp.com', '$2y$10$vXj0p5nF9h5YxH8.TQF8KeMqzN4zV0LqP7oH3qW.YG8fH2pN6K3Vm', 'Administrateur Principal', 1, 1, 1, '+2250700000000', '+2250700000000'),
+('user1', 'user1@financialapp.com', '$2y$10$7KZ9N3pF5h6YxH9.UQG9LeNqzO5aW1MqQ8pH4rX.ZH9gI3qO7L4Wn', 'Jean Utilisateur', 2, 1, 1, '+2250701111111', '+2250701111111')
+ON DUPLICATE KEY UPDATE phone=VALUES(phone), whatsapp=VALUES(whatsapp);
+
+-- ========================================
+-- TABLE VÉRIFICATION EMAIL (OTP)
+-- ========================================
+CREATE TABLE IF NOT EXISTS email_verifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL,
+    code VARCHAR(6) NOT NULL,
+    type ENUM('registration', 'password_reset') NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    verified TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email_code (email, code),
+    INDEX idx_expires (expires_at)
 ) ENGINE=InnoDB;
 
 -- ========================================
--- COMPTES DE TEST AVEC MOTS DE PASSE CORRECTS
--- Admin: admin@financialapp.com / Admin@123
--- User: user1@financialapp.com / User@123
--- ========================================
-
--- Hash générés avec password_hash('Admin@123', PASSWORD_DEFAULT)
-INSERT INTO users (username, email, password, full_name, role_id, is_active) VALUES
-('admin', 'admin@financialapp.com', '$2y$10$vXj0p5nF9h5YxH8.TQF8KeMqzN4zV0LqP7oH3qW.YG8fH2pN6K3Vm', 'Administrateur Principal', 1, 1),
-('user1', 'user1@financialapp.com', '$2y$10$7KZ9N3pF5h6YxH9.UQG9LeNqzO5aW1MqQ8pH4rX.ZH9gI3qO7L4Wn', 'Jean Utilisateur', 2, 1)
-ON DUPLICATE KEY UPDATE password=VALUES(password);
-
--- ========================================
--- TABLE DES TRANSACTIONS
+-- TABLE DES TRANSACTIONS - COMPLÈTE
 -- ========================================
 CREATE TABLE IF NOT EXISTS transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -64,7 +79,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     type ENUM('entree', 'sortie') NOT NULL,
     amount DECIMAL(15, 2) NOT NULL,
     description TEXT NOT NULL,
-    required_date DATE NOT NULL,
+    required_date DATE NOT NULL COMMENT 'Date à laquelle les fonds sont nécessaires',
     urgency ENUM('normal', 'urgent') DEFAULT 'normal',
     status ENUM('en_attente', 'validee', 'refusee') DEFAULT 'en_attente',
     validated_by INT NULL,
@@ -73,6 +88,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     receipt_number VARCHAR(50) UNIQUE NULL,
     is_urgent_notified TINYINT(1) DEFAULT 0,
     last_urgent_notification TIMESTAMP NULL,
+    urgent_notification_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -82,11 +98,12 @@ CREATE TABLE IF NOT EXISTS transactions (
     INDEX idx_urgency (urgency),
     INDEX idx_user (user_id),
     INDEX idx_created_at (created_at),
-    INDEX idx_required_date (required_date)
+    INDEX idx_required_date (required_date),
+    INDEX idx_urgent_pending (urgency, status)
 ) ENGINE=InnoDB;
 
 -- ========================================
--- TABLE DU SOLDE GLOBAL
+-- TABLE DU SOLDE GLOBAL - COMMENCE À ZÉRO
 -- ========================================
 CREATE TABLE IF NOT EXISTS global_balance (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -96,20 +113,25 @@ CREATE TABLE IF NOT EXISTS global_balance (
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
-INSERT INTO global_balance (balance) VALUES (5000000.00)
-ON DUPLICATE KEY UPDATE balance=balance;
+-- CORRECTION MAJEURE : Solde initial à ZÉRO
+INSERT INTO global_balance (balance) VALUES (0.00)
+ON DUPLICATE KEY UPDATE balance=0.00;
 
 -- ========================================
 -- HISTORIQUE DU SOLDE
 -- ========================================
 CREATE TABLE IF NOT EXISTS balance_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    transaction_id INT NOT NULL,
+    transaction_id INT NULL,
     previous_balance DECIMAL(15, 2) NOT NULL,
     new_balance DECIMAL(15, 2) NOT NULL,
     change_amount DECIMAL(15, 2) NOT NULL,
+    change_type ENUM('manual_set', 'transaction_validation') NOT NULL,
+    admin_id INT NULL,
+    notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB;
 
@@ -124,11 +146,14 @@ CREATE TABLE IF NOT EXISTS notifications (
     message TEXT NOT NULL,
     type ENUM('info', 'success', 'warning', 'urgent') DEFAULT 'info',
     is_read TINYINT(1) DEFAULT 0,
+    sent_sms TINYINT(1) DEFAULT 0,
+    sent_whatsapp TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
     INDEX idx_user_read (user_id, is_read),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_transaction (transaction_id)
 ) ENGINE=InnoDB;
 
 -- ========================================
@@ -170,21 +195,17 @@ CREATE TABLE IF NOT EXISTS exports (
 ) ENGINE=InnoDB;
 
 -- ========================================
--- TABLE DES SESSIONS
+-- TABLE DES PRÉFÉRENCES UTILISATEUR
 -- ========================================
-CREATE TABLE IF NOT EXISTS user_sessions (
+CREATE TABLE IF NOT EXISTS user_preferences (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    session_token VARCHAR(255) NOT NULL UNIQUE,
-    ip_address VARCHAR(45) NULL,
-    user_agent TEXT NULL,
-    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    user_id INT NOT NULL UNIQUE,
+    theme VARCHAR(20) DEFAULT 'light',
+    language VARCHAR(10) DEFAULT 'fr',
+    notifications_enabled TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_token (session_token),
-    INDEX idx_user (user_id),
-    INDEX idx_expires (expires_at)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ========================================
@@ -242,8 +263,8 @@ BEGIN
         
         UPDATE global_balance SET balance = new_balance, updated_by = NEW.validated_by WHERE id = 1;
         
-        INSERT INTO balance_history (transaction_id, previous_balance, new_balance, change_amount)
-        VALUES (NEW.id, current_balance, new_balance, change_amount);
+        INSERT INTO balance_history (transaction_id, previous_balance, new_balance, change_amount, change_type, admin_id)
+        VALUES (NEW.id, current_balance, new_balance, change_amount, 'transaction_validation', NEW.validated_by);
     END IF;
 END$$
 
@@ -298,10 +319,35 @@ BEGIN
         (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'sortie' AND status = 'validee' AND created_at >= start_date) as total_sorties;
 END$$
 
+DROP PROCEDURE IF EXISTS set_manual_balance$$
+CREATE PROCEDURE set_manual_balance(
+    IN p_admin_id INT,
+    IN p_new_balance DECIMAL(15, 2),
+    IN p_notes TEXT
+)
+BEGIN
+    DECLARE old_balance DECIMAL(15, 2);
+    DECLARE change_amt DECIMAL(15, 2);
+    
+    SELECT balance INTO old_balance FROM global_balance WHERE id = 1;
+    SET change_amt = p_new_balance - old_balance;
+    
+    UPDATE global_balance SET balance = p_new_balance, updated_by = p_admin_id WHERE id = 1;
+    
+    INSERT INTO balance_history (previous_balance, new_balance, change_amount, change_type, admin_id, notes)
+    VALUES (old_balance, p_new_balance, change_amt, 'manual_set', p_admin_id, p_notes);
+    
+    INSERT INTO activity_logs (user_id, action, table_name, details)
+    VALUES (p_admin_id, 'MANUAL_BALANCE_SET', 'global_balance', 
+            CONCAT('Solde modifié de ', old_balance, ' à ', p_new_balance, '. Raison: ', COALESCE(p_notes, 'Non spécifié')));
+END$$
+
 DROP PROCEDURE IF EXISTS cleanup_expired_sessions$$
 CREATE PROCEDURE cleanup_expired_sessions()
 BEGIN
-    DELETE FROM user_sessions WHERE expires_at < NOW();
+    DELETE FROM email_verifications WHERE expires_at < NOW();
+    UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token_expires < NOW();
+    UPDATE users SET remember_token = NULL, remember_expires = NULL WHERE remember_expires < NOW();
 END$$
 
 DELIMITER ;
@@ -317,20 +363,15 @@ ON SCHEDULE EVERY 1 HOUR
 DO CALL cleanup_expired_sessions();
 
 -- ========================================
--- DONNÉES DE TEST
--- ========================================
-
--- Transactions de test
-INSERT INTO transactions (user_id, type, amount, description, required_date, urgency, status) VALUES
-(2, 'entree', 150000, 'Vente de produits mois de décembre', CURDATE(), 'normal', 'en_attente'),
-(2, 'sortie', 75000, 'Achat de fournitures de bureau', DATE_ADD(CURDATE(), INTERVAL 2 DAY), 'urgent', 'en_attente');
-
--- ========================================
 -- AFFICHAGE DES COMPTES DE TEST
 -- ========================================
 SELECT '========================================' AS '';
-SELECT 'COMPTES DE TEST DISPONIBLES' AS '';
+SELECT 'BASE DE DONNÉES INITIALISÉE AVEC SUCCÈS' AS '';
 SELECT '========================================' AS '';
+SELECT 'COMPTES DE TEST DISPONIBLES :' AS '';
 SELECT 'Admin: admin@financialapp.com / Admin@123' AS '';
 SELECT 'User: user1@financialapp.com / User@123' AS '';
+SELECT '========================================' AS '';
+SELECT 'SOLDE INITIAL : 0.00 FCFA' AS '';
+SELECT "L'administrateur doit saisir le montant réel de la caisse" AS '';
 SELECT '========================================' AS '';
