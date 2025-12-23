@@ -25,7 +25,7 @@ define('SESSION_TIMEOUT', 1800); // 30 minutes d'inactivité
 // ========================================
 // CODE ADMINISTRATEUR FIXE
 // ========================================
-define('ADMIN_CODE', 'ADMIN2025XYZ'); // Code fixe pour inscription admin
+define('ADMIN_CODE', 'Administration'); // Code fixe pour inscription admin
 
 // ========================================
 // CHEMINS

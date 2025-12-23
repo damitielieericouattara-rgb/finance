@@ -2,7 +2,7 @@
 /**
  * SCRIPT CRON POUR LES NOTIFICATIONS URGENTES
  * À exécuter toutes les 10 minutes via cron
- * Crontab: */10 * * * * php /path/to/cron/urgent_notifications.php
+ * Crontab: */10 * * * * php /path/to/cron/urgent_notifications.php 
  */
 
 require_once dirname(__DIR__) . '/config/config.php';
@@ -211,4 +211,4 @@ try {
     
     error_log("Erreur dans le script de notifications urgentes: " . $e->getMessage());
     exit(1);
-}
+}   
