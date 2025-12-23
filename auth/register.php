@@ -1,0 +1,235 @@
+<?php
+require_once '../config/config.php';
+
+// Si déjà connecté, rediriger
+if (isLoggedIn()) {
+    header('Location: ' . (isAdmin() ? '../admin/dashboard.php' : '../user/dashboard.php'));
+    exit();
+}
+
+$errors = [];
+$success = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = cleanInput($_POST['username'] ?? '');
+    $email = cleanInput($_POST['email'] ?? '');
+    $fullName = cleanInput($_POST['full_name'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+    
+    // Validation
+    if (empty($username)) {
+        $errors[] = "Le nom d'utilisateur est requis";
+    }
+    
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Une adresse email valide est requise";
+    }
+    
+    if (empty($fullName)) {
+        $errors[] = "Le nom complet est requis";
+    }
+    
+    if (strlen($password) < PASSWORD_MIN_LENGTH) {
+        $errors[] = "Le mot de passe doit contenir au moins " . PASSWORD_MIN_LENGTH . " caractères";
+    }
+    
+    if ($password !== $confirmPassword) {
+        $errors[] = "Les mots de passe ne correspondent pas";
+    }
+    
+    // Vérifier la complexité du mot de passe
+    if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        $errors[] = "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre";
+    }
+    
+    if (empty($errors)) {
+        try {
+            $db = getDB();
+            
+            // Vérifier si l'email existe déjà
+            $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                $errors[] = "Cette adresse email est déjà utilisée";
+            }
+            
+            // Vérifier si le username existe déjà
+            $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                $errors[] = "Ce nom d'utilisateur est déjà pris";
+            }
+            
+            if (empty($errors)) {
+                // Créer l'utilisateur
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $db->prepare("
+                    INSERT INTO users (username, email, password, full_name, role_id)
+                    VALUES (?, ?, ?, ?, 2)
+                ");
+                
+                if ($stmt->execute([$username, $email, $hashedPassword, $fullName])) {
+                    $userId = $db->lastInsertId();
+                    logActivity($userId, 'REGISTER', 'users', $userId, 'Nouvel utilisateur enregistré');
+                    
+                    // Créer une notification de bienvenue
+                    createNotification(
+                        $userId,
+                        'Bienvenue sur FinanceFlow !',
+                        'Votre compte a été créé avec succès. Vous pouvez maintenant soumettre vos demandes de transactions.',
+                        'success'
+                    );
+                    
+                    $success = true;
+                } else {
+                    $errors[] = "Une erreur est survenue lors de la création du compte";
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Erreur inscription: " . $e->getMessage());
+            $errors[] = "Une erreur est survenue. Veuillez réessayer.";
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un compte - <?php echo SITE_NAME; ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-green-100 min-h-screen py-12">
+    <div class="max-w-2xl mx-auto px-4">
+        <!-- Logo et titre -->
+        <div class="text-center mb-8">
+            <div class="flex justify-center mb-4">
+                <svg class="h-16 w-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900">Créer un compte</h1>
+            <p class="text-gray-600 mt-2">Rejoignez FinanceFlow en quelques clics</p>
+        </div>
+
+        <!-- Formulaire d'inscription -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <?php if ($success): ?>
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm text-green-700 font-medium">Compte créé avec succès !</p>
+                            <p class="text-sm text-green-600 mt-1">
+                                <a href="login.php" class="underline font-semibold">Cliquez ici pour vous connecter</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($errors)): ?>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <div class="ml-3">
+                            <?php foreach ($errors as $error): ?>
+                                <p class="text-sm text-red-700"><?php echo $error; ?></p>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="" class="<?php echo $success ? 'opacity-50 pointer-events-none' : ''; ?>">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom complet *
+                        </label>
+                        <input type="text" id="full_name" name="full_name" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="Jean Dupont"
+                               value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+                    </div>
+
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nom d'utilisateur *
+                        </label>
+                        <input type="text" id="username" name="username" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="jdupont"
+                               value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Adresse email *
+                        </label>
+                        <input type="email" id="email" name="email" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="votre@email.com"
+                               value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                            Mot de passe *
+                        </label>
+                        <input type="password" id="password" name="password" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="••••••••">
+                        <p class="text-xs text-gray-500 mt-1">Min. 8 caractères, une majuscule, une minuscule et un chiffre</p>
+                    </div>
+
+                    <div>
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
+                            Confirmer le mot de passe *
+                        </label>
+                        <input type="password" id="confirm_password" name="confirm_password" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label class="flex items-start">
+                        <input type="checkbox" required
+                               class="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-600">
+                            J'accepte les conditions d'utilisation et la politique de confidentialité
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit"
+                        class="w-full mt-6 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 focus:ring-4 focus:ring-green-300 transition transform hover:scale-105">
+                    Créer mon compte
+                </button>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                    Vous avez déjà un compte ?
+                    <a href="login.php" class="text-green-600 hover:text-green-700 font-semibold">
+                        Se connecter
+                    </a>
+                </p>
+            </div>
+        </div>
+
+        <div class="text-center mt-6">
+            <a href="../index.php" class="text-sm text-gray-600 hover:text-green-600 transition">
+                ← Retour à l'accueil
+            </a>
+        </div>
+    </div>
+</body>
+</html>
