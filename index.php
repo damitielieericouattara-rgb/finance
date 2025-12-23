@@ -1,236 +1,376 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion Financière - Accueil</title>
+    <title>Gestion Financière - Simplifiez votre gestion financière</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .gradient-green {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        }
-        .hover-scale {
-            transition: transform 0.3s ease;
-        }
-        .hover-scale:hover {
-            transform: translateY(-5px);
-        }
-        .fade-in {
-            animation: fadeIn 0.6s ease-in;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./assets/css/responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <span class="ml-3 text-2xl font-bold text-green-600">FinanceFlow</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="auth/login.php" class="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition">
-                        Connexion
-                    </a>
-                    <a href="auth/register.php" class="gradient-green text-white px-6 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition">
-                        Créer un compte
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
+<body class="bg-gray-50 font-sans antialiased">
 
-    <!-- Hero Section -->
-    <div class="gradient-green">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center fade-in">
-            <h1 class="text-5xl font-extrabold text-white mb-6">
-                Gérez vos finances d'entreprise avec simplicité
-            </h1>
-            <p class="text-xl text-green-50 mb-8 max-w-3xl mx-auto">
-                Une solution complète et professionnelle pour suivre, valider et analyser toutes vos transactions financières en temps réel
-            </p>
-            <div class="flex justify-center space-x-4">
-                <a href="auth/register.php" class="bg-white text-green-600 px-8 py-4 rounded-lg text-lg font-bold hover:shadow-2xl transition transform hover:scale-105">
-                    Commencer gratuitement
-                </a>
-                <a href="auth/login.php" class="bg-green-700 text-white px-8 py-4 rounded-lg text-lg font-bold hover:bg-green-800 transition">
+    <!---------------------------------NAVBAR ------------------------------->
+                        <!-- NAVBAR FIXE RESPONSIVE -->
+<nav class="bg-white shadow-md fixed w-full top-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            
+            <!-----------------------Logo-------------------------->
+            <div class="flex items-center space-x-2 flex-shrink-0">
+                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-coins text-white text-xl"></i>
+                    </div>
+                    <span class="text-xl md:text-2xl font-bold text-gray-800">Gestion Financière</span>
+                </div>
+
+            <!----------------------------------Menu Desktop-------------------------------->
+            <div class="hidden md:flex items-center space-x-4">
+                <a href="#home" class="text-gray-700 hover:text-green-600 transition-colors font-medium">Accueil</a>
+                <a href="#features" class="text-gray-700 hover:text-green-600 transition-colors font-medium">Caractéristiques</a>
+                <a href="#about" class="text-gray-700 hover:text-green-600 transition-colors font-medium">À propos</a>
+            </div>
+
+            <!------------------------------Bouton connexion/déconnexion Desktop-------------------------->
+            <div class="hidden md:flex items-center">
+                <a href="./auth/login.php" class="boutton bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md">
                     Se connecter
                 </a>
             </div>
+
+            <!-------------------------------Bouton Hamburger (Mobile)------------------------------>
+            <button id="mobile-menu-btn" class="md:hidden text-gray-700 focus:outline-none p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
         </div>
     </div>
 
-    <!-- Features Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 class="text-4xl font-bold text-center text-gray-900 mb-4">
-            Pourquoi choisir FinanceFlow ?
-        </h2>
-        <p class="text-center text-gray-600 mb-16 text-lg">
-            Une plateforme complète conçue pour optimiser votre gestion financière
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <!-- Feature 1 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Validation Rapide</h3>
-                <p class="text-gray-600">
-                    Soumettez vos demandes et obtenez une validation en quelques clics. Système d'alertes pour les demandes urgentes.
-                </p>
-            </div>
-
-            <!-- Feature 2 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in" style="animation-delay: 0.1s">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Suivi en Temps Réel</h3>
-                <p class="text-gray-600">
-                    Consultez le solde global, visualisez les statistiques et générez des rapports détaillés instantanément.
-                </p>
-            </div>
-
-            <!-- Feature 3 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in" style="animation-delay: 0.2s">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Sécurité Maximale</h3>
-                <p class="text-gray-600">
-                    Vos données sont protégées avec un système d'authentification sécurisé et des logs complets de toutes les actions.
-                </p>
-            </div>
-
-            <!-- Feature 4 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in" style="animation-delay: 0.3s">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Reçus Automatiques</h3>
-                <p class="text-gray-600">
-                    Génération automatique de reçus PDF pour chaque transaction validée avec traçabilité complète.
-                </p>
-            </div>
-
-            <!-- Feature 5 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in" style="animation-delay: 0.4s">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Notifications Intelligentes</h3>
-                <p class="text-gray-600">
-                    Recevez des alertes instantanées pour toutes les actions importantes et demandes urgentes prioritaires.
-                </p>
-            </div>
-
-            <!-- Feature 6 -->
-            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale fade-in" style="animation-delay: 0.5s">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-4">Exports Faciles</h3>
-                <p class="text-gray-600">
-                    Exportez vos données en PDF ou Excel avec filtres personnalisés pour vos rapports hebdomadaires et mensuels.
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Section -->
-    <div class="bg-green-50 py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-                <div>
-                    <div class="text-5xl font-bold text-green-600 mb-2">100%</div>
-                    <div class="text-gray-700 text-lg">Sécurisé</div>
-                </div>
-                <div>
-                    <div class="text-5xl font-bold text-green-600 mb-2">24/7</div>
-                    <div class="text-gray-700 text-lg">Accessible</div>
-                </div>
-                <div>
-                    <div class="text-5xl font-bold text-green-600 mb-2">Temps Réel</div>
-                    <div class="text-gray-700 text-lg">Notifications</div>
-                </div>
-                <div>
-                    <div class="text-5xl font-bold text-green-600 mb-2">Illimité</div>
-                    <div class="text-gray-700 text-lg">Transactions</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- CTA Section -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div class="gradient-green rounded-2xl p-12 text-center">
-            <h2 class="text-4xl font-bold text-white mb-4">
-                Prêt à optimiser votre gestion financière ?
-            </h2>
-            <p class="text-xl text-green-50 mb-8">
-                Rejoignez dès maintenant notre plateforme et simplifiez la gestion de vos transactions
-            </p>
-            <a href="auth/register.php" class="inline-block bg-white text-green-600 px-10 py-4 rounded-lg text-lg font-bold hover:shadow-2xl transition transform hover:scale-105">
-                Créer mon compte gratuitement
+    <!---------------------------------Menu Mobile--------------------------->
+    <div id="mobile-menu" class="hidden">
+        <div class="px-4 py-3 space-y-1 bg-white shadow-lg">
+            
+            <a href="#home" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+                Accueil
+            </a>
+            <a href="#features" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+                Caractéristiques
+            </a>
+            <a href="#about" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+                À propos
+            </a>
+            <a href="./auth/login.php" class="block bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 text-center mt-2">
+                Se connecter
             </a>
         </div>
     </div>
+</nav>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                    <div class="flex items-center mb-4">
-                        <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span class="ml-2 text-xl font-bold">FinanceFlow</span>
-                    </div>
-                    <p class="text-gray-400">
-                        Votre solution professionnelle pour une gestion financière transparente et efficace.
+    <!----------------------------------------SECTION ACCEUIL------------------------------>
+    <section id="home" class="relative pt-32 pb-20 px-6 bg-gradient-to-r from-green-500 to-green-600 overflow-hidden">
+        
+        <div class="absolute top-0 right-0 w-96 h-96 bg-green-500 rounded-full filter blur-3xl opacity-20 -mr-48 -mt-48"></div>
+        <div class="absolute bottom-0 left-0 w-96 h-96 bg-green-500 rounded-full filter blur-3xl opacity-20 -ml-48 -mb-48"></div>
+        
+        <div class="container mx-auto relative z-10">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <!--------------------------------------TEXT DE LA PARTIE ACCEUIL------------------------------>
+                <div class="text-white space-y-6 fade-in-up">
+                    <h1 class="text-5xl md:text-6xl font-bold leading-tight">
+                        Simplifiez et sécurisez votre gestion financière
+                    </h1>
+                    <p class="text-xl text-green-100 leading-relaxed">
+                        Suivez toutes vos transactions, contrôlez votre budget et restez organisé sans effort grâce à notre plateforme intuitive.
                     </p>
+                    <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                        <a href="./utilisateur/login.html" class="bg-white text-green-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl text-center">
+                           <i class="fas fa-rocket mr-2"></i> Commencer
+                        </a>
+                        <a href="#features" class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-green-600 transition-all text-center">
+                           <i class="fas fa-arrow-down mr-2"></i> Apprendre encore plus
+                        </a>
+                    </div>
                 </div>
-                <div>
-                    <h4 class="text-lg font-semibold mb-4">Liens rapides</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="auth/login.php" class="hover:text-green-500 transition">Connexion</a></li>
-                        <li><a href="auth/register.php" class="hover:text-green-500 transition">Créer un compte</a></li>
-                        <li><a href="#" class="hover:text-green-500 transition">Support</a></li>
+
+                <!------------------------------ILLUSTRATION DE LA PARTIE ACCEUIL------------------------------->
+                <div class="hidden md:block fade-in-up delay-200">
+                    <div class="bg-white rounded-2xl shadow-2xl p-8 transform hover:scale-105 transition-transform duration-300">
+                        <div class="space-y-4">
+                            <!----------------------------POUR LA PARTIE SCREEN DE PC MACBOOK------------------------>
+                            <div class="flex items-center justify-between pb-4 border-b">
+                                <h3 class="font-bold text-gray-800">Aperçu du tableau de bord</h3>
+                                <div class="flex space-x-2">
+                                    <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                    <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-600">Revenu total</p>
+                                    <p class="text-2xl font-bold text-green-600">45 32000 FCFA</p>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-600">Dépenses totales</p>
+                                    <p class="text-2xl font-bold text-red-600">28 45000 FCFA</p>
+                                </div>
+                            </div>
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 p-4 rounded-lg text-white">
+                                <p class="text-sm opacity-90">Solde actuel</p>
+                                <p class="text-3xl font-bold">16 87000 FCFA</p>
+                            </div>
+                            <div class="flex items-center justify-center py-4">
+                                <svg class="w-full h-20" viewBox="0 0 200 40">
+                                    <polyline points="0,30 40,25 80,15 120,20 160,10 200,15" fill="none" stroke="#2563eb" stroke-width="2"/>
+                                    <polyline points="0,30 40,25 80,15 120,20 160,10 200,15" fill="url(#gradient)" opacity="0.3"/>
+                                    <defs>
+                                        <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#2563eb;stop-opacity:0.5" />
+                                            <stop offset="100%" style="stop-color:#2563eb;stop-opacity:0" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-----------------------------------Section caracteristiques---------------------------------->
+    <section id="features" class="py-20 px-6 bg-white">
+        <div class="container mx-auto">
+            <div class="text-center mb-16 fade-in-section">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Des fonctionnalités puissantes pour un contrôle total</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Tout ce dont vous avez besoin pour gérer vos finances efficacement et en toute sécurité</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!------------------------caracteristiques 1------------------------>
+                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Suivi des revenus et des dépenses</h3>
+                    <p class="text-gray-600">Suivez chaque transaction grâce à une catégorisation détaillée et des mises à jour instantanées de votre aperçu financier.</p>
+                </div>
+
+                <!------------------------caracteristiques 2------------------------>
+                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Mises à jour du solde en temps réel</h3>
+                    <p class="text-gray-600">Consultez instantanément votre situation financière actuelle grâce aux calculs automatiques et au suivi en temps réel de votre solde.</p>
+                </div>
+
+                <!------------------------caracteristiques 3------------------------>
+                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Générer des reçus et des rapports</h3>
+                    <p class="text-gray-600">Créez des rapports et des reçus professionnels grâce à des fonctionnalités complètes d'analyse et d'exportation des données.</p>
+                </div>
+
+                <!------------------------caracteristiques 4------------------------>
+                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                    <div class="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-lg flex items-center justify-center mb-6">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Accès sécurisé et rôles</h3>
+                    <p class="text-gray-600">Une sécurité de niveau entreprise avec contrôle d'accès basé sur les rôles pour protéger vos données financières sensibles.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!--------------------------------------------SECTION  A PROPOS----------------------------->
+    <section id="about" class="py-20 px-6 bg-gray-50">
+        <div class="container mx-auto">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <!------------------------------partie texte------------------------------->
+                <div class="space-y-6 fade-in-section">
+                    <h2 class="text-4xl font-bold text-gray-800">Une interface claire et intuitive</h2>
+                    <p class="text-lg text-gray-600 leading-relaxed">
+                        Conçue pour les utilisateurs comme pour les administrateurs, notre plateforme offre une expérience simplifiée qui facilite la gestion financière.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start space-x-3">
+                            <svg class="w-6 h-6 text-green-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-gray-700">Tableau de bord convivial avec widgets personnalisables</span>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg class="w-6 h-6 text-green-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-gray-700">Des outils d'administration performants pour une supervision complète</span>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg class="w-6 h-6 text-green-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-gray-700">Conception adaptative fonctionnant sur tous les appareils</span>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <svg class="w-6 h-6 text-green-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-gray-700">Fonctionnalités avancées de filtrage et de recherche</span>
+                        </li>
                     </ul>
                 </div>
+
+                <!------------------------------POUR LA PARTIE SCREEN DE PC MACBOOK-------------------------------->
+                <div class="relative fade-in-section">
+                    <div class="relative z-10 bg-white rounded-2xl shadow-2xl p-6 transform hover:scale-105 transition-transform duration-300">
+                        <!-----------------------PARTIE BARRE DE RECHERCHE------------------------------------->
+                        <div class="flex items-center space-x-2 mb-4 pb-4 border-b">
+                            <div class="flex space-x-2">
+                                <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+                                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                            </div>
+                            <div class="flex-1 bg-gray-100 rounded px-3 py-1 text-xs text-gray-500">
+                                GestionFinancière.app/dashboard
+                            </div>
+                        </div>
+                        
+                        <!----------------LES CARRES DU MOCKUP------------------------>
+                        <div class="space-y-3">
+                            <div class="h-8 bg-gradient-to-r from-green-500 to-green-600 rounded"></div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="h-20 bg-green-100 rounded"></div>
+                                <div class="h-20 bg-blue-100 rounded"></div>
+                                <div class="h-20 bg-purple-100 rounded"></div>
+                            </div>
+                            <div class="h-32 bg-gray-100 rounded"></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="h-16 bg-gray-100 rounded"></div>
+                                <div class="h-16 bg-gray-100 rounded"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!---------------------LE CARRE ARRIERE------------------- -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl transform translate-x-4 translate-y-4 -z-10"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!--------------------------------Section  CTA---------------------------------------->
+<section class="relative py-24 rounded-t-lg px-6 bg-gradient-to-br from-green-500 via-green-600 to-green-700 overflow-hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-10"></div>
+    <div class="absolute top-0 left-0 w-64 h-64 bg-white rounded-full opacity-10 -ml-32 -mt-32"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-green-400 rounded-full opacity-20 -mr-48 -mb-48"></div>
+    
+    <div class="container mx-auto relative z-10 text-center fade-in-section">
+        <h2 class="text-5xl md:text-6xl font-extrabold text-white mb-6 leading-tight">
+            Prêt à transformer votre gestion financière ?
+        </h2>
+        <p class="text-xl md:text-2xl text-green-100 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Rejoignez des milliers d'utilisateurs satisfaits et simplifiez votre quotidien dès aujourd'hui.
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                <div class="text-4xl font-bold text-white mb-2">50K+</div>
+                <p class="text-green-200">Entreprises satisfaites</p>
+            </div>
+            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                <div class="text-4xl font-bold text-white mb-2">99.9%</div>
+                <p class="text-green-200">Taux de disponibilité</p>
+            </div>
+            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 fade-in-section">
+                <div class="text-4xl font-bold text-white mb-2">24/7</div>
+                <p class="text-green-200">Support technique</p>
+            </div>
+        </div>
+        
+        <!-- Boutons CTA -->
+        <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <a href="./auth/login.php" class="inline-block bg-white text-green-600 px-12 py-5 rounded-lg font-bold text-xl hover:bg-gray-100 transition-all transform hover:scale-110 shadow-2xl hover:shadow-3xl animate-pulse">
+                <i class="fas fa-rocket mr-2"></i>Commencer maintenant
+            </a>
+            <a href="#features" class="inline-block bg-transparent border-2 border-white text-white px-12 py-5 rounded-lg font-semibold text-xl hover:bg-white hover:text-green-600 transition-all transform hover:scale-105">
+               <i class="fas fa-info-circle mr-2"></i> Voir les fonctionnalités
+            </a>
+        </div>
+    </div>
+</section>
+
+    <!---------------------------------------Footer---------------------------------->
+    <footer class="bg-gray-900 text-gray-300 py-12 px-6">
+        <div class="container mx-auto">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <!-----------------------------Info de la compagnie------------------------------>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-coins text-white"></i>
+                        </div>
+                        <span class="text-xl font-bold text-white">Gestion Financière</span>
+                    </div>
+                    <p class="text-sm">Votre partenaire de confiance en matière de gestion et d'organisation financières.</p>
+                </div>
+
+                <!--------------------------PARTIE LIEN RAPIDE-------------------------------->
                 <div>
-                    <h4 class="text-lg font-semibold mb-4">Contact</h4>
-                    <ul class="space-y-2 text-gray-400">
-                        <li>Email: support@financeflow.com</li>
-                        <li>Téléphone: +225 XX XX XX XX XX</li>
+                    <h3 class="text-white font-bold mb-4"><i class="fas fa-link mr-2"></i>Liens rapides</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#home" class="hover:text-green-400 transition-colors">Acceuil</a></li>
+                        <li><a href="#features" class="hover:text-green-400 transition-colors">Caractéristiques</a></li>
+                        <li><a href="#about" class="hover:text-green-400 transition-colors">A propos</a></li>
+                        <li><a href="./utilisateur/login.html" class="hover:text-green-400 transition-colors">Se connecter</a></li>
+                    </ul>
+                </div>
+
+                
+                <div>
+                    <h3 class="text-white font-bold mb-4"><i class="fas fa-headset mr-2"></i>Support</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Centre d'aide</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Contactez-nous</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Documentation</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">FAQ</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="text-white font-bold mb-4"><i class="fas fa-shield-alt mr-1"></i>Légal</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-green-400 transition-colors">politique de confidentialité</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Conditions d'utilisation</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Politique relative aux cookies</a></li>
+                        <li><a href="#" class="hover:text-green-400 transition-colors">Conformité</a></li>
                     </ul>
                 </div>
             </div>
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 FinanceFlow. Tous droits réservés.</p>
+
+            
+            <div class="border-t border-gray-800 pt-8 text-center text-sm">
+                <p>&copy; 2025 Gestion Financière. Tous droit réserver.</p>
             </div>
         </div>
     </footer>
+    <!-------------------------------------JavaScript----------------------------------->
+    <script src="./assets/js/notifications.js"></script>
+    <script src="./script.js"></script>
+    <script src="./assets/js/main.js"></script>
+    <script src="./assets/js/responsive.js"></script>
+
 </body>
 </html>

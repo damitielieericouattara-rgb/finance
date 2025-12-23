@@ -16,8 +16,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 // Constantes de l'application
-define('SITE_NAME', 'FinanceFlow');
-define('SITE_URL', 'http://localhost/financial-management');
+define('SITE_NAME', 'Gestion Financière');
+define('SITE_URL', 'http://localhost/finance');
 define('SESSION_TIMEOUT', 1800); // 30 minutes d'inactivité
 
 // Chemins
@@ -32,7 +32,7 @@ define('SMTP_PORT', 587);
 define('SMTP_USER', 'noreply@financeflow.com');
 define('SMTP_PASS', 'your_password');
 define('FROM_EMAIL', 'noreply@financeflow.com');
-define('FROM_NAME', 'FinanceFlow');
+define('FROM_NAME', 'Gestion Financière');
 
 // Paramètres de notification urgente
 define('URGENT_NOTIFICATION_INTERVAL', 300); // 5 minutes en secondes (300)
@@ -219,4 +219,8 @@ function getTypeLabel($type) {
 function getUrgencyLabel($urgency) {
     return $urgency === 'urgent' ? 'Urgent' : 'Normal';
 }
-?>
+
+// ========================================
+// CHARGER LES FONCTIONS MÉTIER
+// ========================================
+require_once ROOT_PATH . '/includes/functions.php';

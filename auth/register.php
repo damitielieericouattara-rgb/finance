@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullName = cleanInput($_POST['full_name'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
+    $selectedRole = cleanInput($_POST['role'] ?? '');
     
     // Validation
     if (empty($username)) {
@@ -28,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($fullName)) {
         $errors[] = "Le nom complet est requis";
+    }
+    
+    if (empty($selectedRole) || !in_array($selectedRole, ['admin', 'user'])) {
+        $errors[] = "Veuillez sélectionner un rôle valide";
     }
     
     if (strlen($password) < PASSWORD_MIN_LENGTH) {
@@ -62,22 +67,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             if (empty($errors)) {
-                // Créer l'utilisateur
+                // Créer l'utilisateur avec le rôle sélectionné
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $roleId = $selectedRole === 'admin' ? 1 : 2;
+                
                 $stmt = $db->prepare("
                     INSERT INTO users (username, email, password, full_name, role_id)
-                    VALUES (?, ?, ?, ?, 2)
+                    VALUES (?, ?, ?, ?, ?)
                 ");
                 
-                if ($stmt->execute([$username, $email, $hashedPassword, $fullName])) {
+                if ($stmt->execute([$username, $email, $hashedPassword, $fullName, $roleId])) {
                     $userId = $db->lastInsertId();
-                    logActivity($userId, 'REGISTER', 'users', $userId, 'Nouvel utilisateur enregistré');
+                    logActivity($userId, 'REGISTER', 'users', $userId, 'Nouvel utilisateur enregistré avec le rôle: ' . $selectedRole);
                     
                     // Créer une notification de bienvenue
                     createNotification(
                         $userId,
-                        'Bienvenue sur FinanceFlow !',
-                        'Votre compte a été créé avec succès. Vous pouvez maintenant soumettre vos demandes de transactions.',
+                        'Bienvenue sur Gestion Financière !',
+                        'Votre compte ' . ($selectedRole === 'admin' ? 'administrateur' : 'utilisateur') . ' a été créé avec succès.',
                         'success'
                     );
                     
@@ -111,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </svg>
             </div>
             <h1 class="text-3xl font-bold text-gray-900">Créer un compte</h1>
-            <p class="text-gray-600 mt-2">Rejoignez FinanceFlow en quelques clics</p>
+            <p class="text-gray-600 mt-2">Rejoignez notre plateforme de gestion financière</p>
         </div>
 
         <!-- Formulaire d'inscription -->
@@ -148,54 +155,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST" action="" class="<?php echo $success ? 'opacity-50 pointer-events-none' : ''; ?>">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-6">
+                    <!-- Sélection du rôle -->
                     <div>
-                        <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nom complet *
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Je souhaite créer un compte * 
                         </label>
-                        <input type="text" id="full_name" name="full_name" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                               placeholder="Jean Dupont"
-                               value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="admin" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'admin') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 transition">
+                                    <svg class="mx-auto h-10 w-10 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span class="font-semibold text-lg">Administrateur</span>
+                                    <p class="text-xs text-gray-600 mt-1">Accès complet</p>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="user" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'user') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 transition">
+                                    <svg class="mx-auto h-10 w-10 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-semibold text-lg">Utilisateur</span>
+                                    <p class="text-xs text-gray-600 mt-1">Utilisateur standard</p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
-                    <div>
-                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nom d'utilisateur *
-                        </label>
-                        <input type="text" id="username" name="username" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                               placeholder="jdupont"
-                               value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>">
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                Nom complet *
+                            </label>
+                            <input type="text" id="full_name" name="full_name" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                   placeholder="Jean Dupont"
+                                   value="<?php echo htmlspecialchars($_POST['full_name'] ?? ''); ?>">
+                        </div>
 
-                    <div class="md:col-span-2">
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                            Adresse email *
-                        </label>
-                        <input type="email" id="email" name="email" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                               placeholder="votre@email.com"
-                               value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
-                    </div>
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                                Nom d'utilisateur *
+                            </label>
+                            <input type="text" id="username" name="username" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                   placeholder="jdupont"
+                                   value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>">
+                        </div>
 
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                            Mot de passe *
-                        </label>
-                        <input type="password" id="password" name="password" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                               placeholder="••••••••">
-                        <p class="text-xs text-gray-500 mt-1">Min. 8 caractères, une majuscule, une minuscule et un chiffre</p>
-                    </div>
+                        <div class="md:col-span-2">
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                                Adresse email *
+                            </label>
+                            <input type="email" id="email" name="email" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                   placeholder="votre@email.com"
+                                   value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                        </div>
 
-                    <div>
-                        <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
-                            Confirmer le mot de passe *
-                        </label>
-                        <input type="password" id="confirm_password" name="confirm_password" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                               placeholder="••••••••">
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                                Mot de passe *
+                            </label>
+                            <input type="password" id="password" name="password" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                   placeholder="••••••••">
+                            <p class="text-xs text-gray-500 mt-1">Min. 8 caractères, une majuscule, une minuscule et un chiffre</p>
+                        </div>
+
+                        <div>
+                            <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
+                                Confirmer le mot de passe *
+                            </label>
+                            <input type="password" id="confirm_password" name="confirm_password" required
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                                   placeholder="••••••••">
+                        </div>
                     </div>
                 </div>
 

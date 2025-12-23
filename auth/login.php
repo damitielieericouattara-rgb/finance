@@ -16,9 +16,12 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = cleanInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $selectedRole = cleanInput($_POST['role'] ?? '');
     
     if (empty($email) || empty($password)) {
         $error = 'Veuillez remplir tous les champs';
+    } elseif (empty($selectedRole)) {
+        $error = 'Veuillez sélectionner votre rôle';
     } else {
         try {
             $db = getDB();
@@ -32,29 +35,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Connexion réussie
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['role'] = $user['role_name'];
-                $_SESSION['role_id'] = $user['role_id'];
-                $_SESSION['LAST_ACTIVITY'] = time();
-                
-                // Mettre à jour la dernière connexion
-                $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
-                $updateStmt->execute([$user['id']]);
-                
-                // Logger l'activité
-                logActivity($user['id'], 'LOGIN', 'users', $user['id'], 'Connexion réussie');
-                
-                // Rediriger selon le rôle
-                if ($user['role_name'] === 'admin') {
-                    header('Location: ../admin/dashboard.php');
+                // Vérifier que le rôle sélectionné correspond au compte
+                if ($user['role_name'] !== $selectedRole) {
+                    $error = 'Le rôle sélectionné ne correspond pas à votre compte';
+                    logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative avec mauvais rôle pour: $email");
                 } else {
-                    header('Location: ../user/dashboard.php');
+                    // Connexion réussie
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['full_name'] = $user['full_name'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['role'] = $user['role_name'];
+                    $_SESSION['role_id'] = $user['role_id'];
+                    $_SESSION['LAST_ACTIVITY'] = time();
+                    
+                    // Mettre à jour la dernière connexion
+                    $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                    $updateStmt->execute([$user['id']]);
+                    
+                    // Logger l'activité
+                    logActivity($user['id'], 'LOGIN', 'users', $user['id'], 'Connexion réussie en tant que ' . $user['role_name']);
+                    
+                    // Rediriger selon le rôle
+                    if ($user['role_name'] === 'admin') {
+                        header('Location: ../admin/dashboard.php');
+                    } else {
+                        header('Location: ../user/dashboard.php');
+                    }
+                    exit();
                 }
-                exit();
             } else {
                 $error = 'Email ou mot de passe incorrect';
                 logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative échouée pour: $email");
@@ -84,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </svg>
             </div>
             <h1 class="text-3xl font-bold text-gray-900">Connexion</h1>
-            <p class="text-gray-600 mt-2">Accédez à votre espace FinanceFlow</p>
+            <p class="text-gray-600 mt-2">Accédez à votre espace Gestion Financière</p>
         </div>
 
         <!-- Formulaire de connexion -->
@@ -102,6 +111,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <form method="POST" action="">
                 <div class="space-y-6">
+                    <!-- Sélection du rôle -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Je me connecte en tant que *
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="admin" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'admin') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 transition">
+                                    <svg class="mx-auto h-8 w-8 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span class="font-semibold">Administrateur</span>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="user" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'user') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 transition">
+                                    <svg class="mx-auto h-8 w-8 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-semibold">Utilisateur</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
                             Adresse email
@@ -151,21 +191,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <!-- Comptes de test -->
-            <div class="mt-6 pt-6 border-t border-gray-200">
+            <!-- <div class="mt-6 pt-6 border-t border-gray-200">
                 <p class="text-xs text-gray-500 text-center mb-3">Comptes de test disponibles :</p>
                 <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="font-semibold text-gray-700 mb-1">Admin</p>
+                    <div class="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                        <p class="font-semibold text-purple-700 mb-1">👑 Admin</p>
                         <p class="text-gray-600">admin@financialapp.com</p>
                         <p class="text-gray-600">Admin@123</p>
+                        <p class="text-purple-600 text-[10px] mt-1">Rôle: Administrateur</p>
                     </div>
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <p class="font-semibold text-gray-700 mb-1">Utilisateur</p>
+                    <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <p class="font-semibold text-green-700 mb-1">👤 User</p>
                         <p class="text-gray-600">user1@financialapp.com</p>
                         <p class="text-gray-600">User@123</p>
+                        <p class="text-green-600 text-[10px] mt-1">Rôle: Utilisateur</p>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <div class="text-center mt-6">

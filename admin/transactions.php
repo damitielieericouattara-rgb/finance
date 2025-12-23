@@ -60,8 +60,8 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation (identique au dashboard) -->
-    <nav class="bg-white shadow-lg">
+    <!-- Navigation FIXE -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -76,7 +76,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <a href="dashboard.php" class="text-gray-700 hover:text-green-600">Dashboard</a>
                     <a href="transactions.php" class="text-green-600 font-medium">Transactions</a>
                     <a href="users.php" class="text-gray-700 hover:text-green-600">Utilisateurs</a>
-                    <a href="reports.php" class="text-gray-700 hover:text-green-600">Rapports</a>
+                    <a href="reports.php" class="text-gray-700 hover:text-green-600">Exports</a>
                     
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
@@ -174,9 +174,9 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date requise</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Urgence</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
@@ -201,6 +201,9 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                                 <td class="px-6 py-4 max-w-xs">
                                     <p class="text-sm text-gray-900 truncate"><?php echo htmlspecialchars($trans['description']); ?></p>
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    <?php echo formatDate($trans['required_date']); ?>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <?php if ($trans['urgency'] === 'urgent'): ?>
                                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 animate-pulse">
@@ -224,20 +227,19 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                                         <?php echo getStatusLabel($trans['status']); ?>
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <?php echo formatDateTime($trans['created_at'], 'd/m/Y H:i'); ?>
-                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <?php if ($trans['status'] === 'en_attente'): ?>
                                         <button onclick="openModal(<?php echo htmlspecialchars(json_encode($trans)); ?>)" 
-                                                class="text-green-600 hover:text-green-900 font-medium">
+                                                class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
                                             Traiter
                                         </button>
+                                    <?php elseif ($trans['status'] === 'validee'): ?>
+                                        <a href="../pdf/receipt.php?id=<?php echo $trans['id']; ?>" target="_blank"
+                                           class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 inline-block">
+                                            📄 Reçu
+                                        </a>
                                     <?php else: ?>
-                                        <button onclick="viewDetails(<?php echo htmlspecialchars(json_encode($trans)); ?>)" 
-                                                class="text-blue-600 hover:text-blue-900 font-medium">
-                                            Détails
-                                        </button>
+                                        <span class="text-gray-500">Refusée</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -249,36 +251,22 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             <!-- Pagination -->
             <?php if ($totalPages > 1): ?>
                 <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
-                    <div class="flex-1 flex justify-between sm:hidden">
-                        <?php if ($page > 1): ?>
-                            <a href="?page=<?php echo $page - 1; ?>&<?php echo http_build_query($filters); ?>" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                Précédent
-                            </a>
-                        <?php endif; ?>
-                        <?php if ($page < $totalPages): ?>
-                            <a href="?page=<?php echo $page + 1; ?>&<?php echo http_build_query($filters); ?>" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                Suivant
-                            </a>
-                        <?php endif; ?>
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            Affichage de <span class="font-medium"><?php echo (($page - 1) * $perPage) + 1; ?></span> à 
+                            <span class="font-medium"><?php echo min($page * $perPage, $totalTransactions); ?></span> sur 
+                            <span class="font-medium"><?php echo $totalTransactions; ?></span> résultats
+                        </p>
                     </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                Affichage de <span class="font-medium"><?php echo (($page - 1) * $perPage) + 1; ?></span> à 
-                                <span class="font-medium"><?php echo min($page * $perPage, $totalTransactions); ?></span> sur 
-                                <span class="font-medium"><?php echo $totalTransactions; ?></span> résultats
-                            </p>
-                        </div>
-                        <div>
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                    <a href="?page=<?php echo $i; ?>&<?php echo http_build_query($filters); ?>" 
-                                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium <?php echo $i === $page ? 'bg-green-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
-                                        <?php echo $i; ?>
-                                    </a>
-                                <?php endfor; ?>
-                            </nav>
-                        </div>
+                    <div>
+                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                <a href="?page=<?php echo $i; ?>&<?php echo http_build_query($filters); ?>" 
+                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium <?php echo $i === $page ? 'bg-green-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'; ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+                        </nav>
                     </div>
                 </div>
             <?php endif; ?>
@@ -287,7 +275,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
 
     <!-- Modal de traitement -->
     <div id="actionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6">
                 <h3 class="text-xl font-bold text-gray-900 mb-4">Traiter la transaction</h3>
                 <div id="modalContent"></div>
@@ -295,11 +283,11 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
                         Annuler
                     </button>
-                    <button onclick="submitAction('reject')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        Refuser
+                    <button onclick="submitAction('reject')" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold">
+                        ❌ Refuser
                     </button>
-                    <button onclick="submitAction('validate')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                        Valider
+                    <button onclick="submitAction('validate')" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold">
+                        ✅ Valider
                     </button>
                 </div>
             </div>
@@ -314,29 +302,31 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             const content = `
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Utilisateur</label>
-                            <p class="text-sm text-gray-900">${transaction.user_name}</p>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label class="text-xs font-medium text-gray-500 uppercase">Utilisateur</label>
+                            <p class="text-sm font-semibold text-gray-900 mt-1">${transaction.user_name}</p>
                         </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Type</label>
-                            <p class="text-sm text-gray-900">${transaction.type === 'entree' ? 'Entrée' : 'Sortie'}</p>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label class="text-xs font-medium text-gray-500 uppercase">Type</label>
+                            <p class="text-sm font-semibold text-gray-900 mt-1">${transaction.type === 'entree' ? '📈 Entrée' : '📉 Sortie'}</p>
                         </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Montant</label>
-                            <p class="text-sm font-semibold text-gray-900">${parseFloat(transaction.amount).toLocaleString('fr-FR')} FCFA</p>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label class="text-xs font-medium text-gray-500 uppercase">Montant</label>
+                            <p class="text-lg font-bold text-gray-900 mt-1">${parseFloat(transaction.amount).toLocaleString('fr-FR')} FCFA</p>
                         </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700">Date requise</label>
-                            <p class="text-sm text-gray-900">${new Date(transaction.required_date).toLocaleDateString('fr-FR')}</p>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <label class="text-xs font-medium text-gray-500 uppercase">Date requise</label>
+                            <p class="text-sm font-semibold text-gray-900 mt-1">${new Date(transaction.required_date).toLocaleDateString('fr-FR')}</p>
                         </div>
                     </div>
-                    <div>
-                        <label class="text-sm font-medium text-gray-700">Description</label>
-                        <p class="text-sm text-gray-900 mt-1">${transaction.description}</p>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <label class="text-xs font-medium text-gray-500 uppercase">Description / Motif</label>
+                        <p class="text-sm text-gray-900 mt-2">${transaction.description}</p>
                     </div>
                     <div>
-                        <label for="modalComment" class="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel pour validation, requis pour refus)</label>
+                        <label for="modalComment" class="block text-sm font-medium text-gray-700 mb-2">
+                            Commentaire ${transaction.urgency === 'urgent' ? '(requis pour refus)' : '(optionnel)'}
+                        </label>
                         <textarea id="modalComment" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="Ajoutez un commentaire..."></textarea>
                     </div>
                 </div>
@@ -362,6 +352,10 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 return;
             }
             
+            if (action === 'validate' && !confirm('Confirmer la validation de cette transaction ?')) {
+                return;
+            }
+            
             const form = document.createElement('form');
             form.method = 'POST';
             form.innerHTML = `
@@ -371,10 +365,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             `;
             document.body.appendChild(form);
             form.submit();
-        }
-
-        function viewDetails(transaction) {
-            alert('Fonctionnalité de détails à implémenter');
         }
     </script>
 </body>

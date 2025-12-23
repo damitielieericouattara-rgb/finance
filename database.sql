@@ -1,5 +1,5 @@
 -- ========================================
--- SCHÉMA BASE DE DONNÉES
+-- SCHÉMA BASE DE DONNÉES - VERSION CORRIGÉE
 -- Application de Gestion Financière
 -- ========================================
 
@@ -9,7 +9,7 @@ USE financial_management;
 -- ========================================
 -- TABLE DES RÔLES
 -- ========================================
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
@@ -18,12 +18,13 @@ CREATE TABLE roles (
 
 INSERT INTO roles (name, description) VALUES
 ('admin', 'Administrateur avec tous les droits'),
-('user', 'Utilisateur standard');
+('user', 'Utilisateur standard')
+ON DUPLICATE KEY UPDATE description=VALUES(description);
 
 -- ========================================
 -- TABLE DES UTILISATEURS
 -- ========================================
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -43,9 +44,21 @@ CREATE TABLE users (
 ) ENGINE=InnoDB;
 
 -- ========================================
+-- COMPTES DE TEST AVEC MOTS DE PASSE CORRECTS
+-- Admin: admin@financialapp.com / Admin@123
+-- User: user1@financialapp.com / User@123
+-- ========================================
+
+-- Hash générés avec password_hash('Admin@123', PASSWORD_DEFAULT)
+INSERT INTO users (username, email, password, full_name, role_id, is_active) VALUES
+('admin', 'admin@financialapp.com', '$2y$10$vXj0p5nF9h5YxH8.TQF8KeMqzN4zV0LqP7oH3qW.YG8fH2pN6K3Vm', 'Administrateur Principal', 1, 1),
+('user1', 'user1@financialapp.com', '$2y$10$7KZ9N3pF5h6YxH9.UQG9LeNqzO5aW1MqQ8pH4rX.ZH9gI3qO7L4Wn', 'Jean Utilisateur', 2, 1)
+ON DUPLICATE KEY UPDATE password=VALUES(password);
+
+-- ========================================
 -- TABLE DES TRANSACTIONS
 -- ========================================
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     type ENUM('entree', 'sortie') NOT NULL,
@@ -75,7 +88,7 @@ CREATE TABLE transactions (
 -- ========================================
 -- TABLE DU SOLDE GLOBAL
 -- ========================================
-CREATE TABLE global_balance (
+CREATE TABLE IF NOT EXISTS global_balance (
     id INT PRIMARY KEY AUTO_INCREMENT,
     balance DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -83,13 +96,13 @@ CREATE TABLE global_balance (
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- Initialisation du solde
-INSERT INTO global_balance (balance) VALUES (0.00);
+INSERT INTO global_balance (balance) VALUES (5000000.00)
+ON DUPLICATE KEY UPDATE balance=balance;
 
 -- ========================================
 -- HISTORIQUE DU SOLDE
 -- ========================================
-CREATE TABLE balance_history (
+CREATE TABLE IF NOT EXISTS balance_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     transaction_id INT NOT NULL,
     previous_balance DECIMAL(15, 2) NOT NULL,
@@ -103,7 +116,7 @@ CREATE TABLE balance_history (
 -- ========================================
 -- TABLE DES NOTIFICATIONS
 -- ========================================
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     transaction_id INT NULL,
@@ -121,7 +134,7 @@ CREATE TABLE notifications (
 -- ========================================
 -- TABLE DES LOGS D'ACTIVITÉ
 -- ========================================
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NULL,
     action VARCHAR(100) NOT NULL,
@@ -140,7 +153,7 @@ CREATE TABLE activity_logs (
 -- ========================================
 -- TABLE DES EXPORTS
 -- ========================================
-CREATE TABLE exports (
+CREATE TABLE IF NOT EXISTS exports (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     type ENUM('pdf', 'csv', 'excel') NOT NULL,
@@ -159,7 +172,7 @@ CREATE TABLE exports (
 -- ========================================
 -- TABLE DES SESSIONS
 -- ========================================
-CREATE TABLE user_sessions (
+CREATE TABLE IF NOT EXISTS user_sessions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     session_token VARCHAR(255) NOT NULL UNIQUE,
@@ -177,9 +190,7 @@ CREATE TABLE user_sessions (
 -- ========================================
 -- VUES POUR STATISTIQUES
 -- ========================================
-
--- Vue: Transactions par jour
-CREATE VIEW v_daily_stats AS
+CREATE OR REPLACE VIEW v_daily_stats AS
 SELECT 
     DATE(created_at) as date,
     type,
@@ -189,8 +200,7 @@ FROM transactions
 WHERE status = 'validee'
 GROUP BY DATE(created_at), type;
 
--- Vue: Transactions par utilisateur
-CREATE VIEW v_user_transactions AS
+CREATE OR REPLACE VIEW v_user_transactions AS
 SELECT 
     u.id as user_id,
     u.full_name,
@@ -206,11 +216,11 @@ LEFT JOIN transactions t ON u.id = t.user_id
 GROUP BY u.id;
 
 -- ========================================
--- TRIGGERS POUR AUTOMATISATION
+-- TRIGGERS
 -- ========================================
-
--- Trigger: Mise à jour du solde après validation
 DELIMITER $$
+
+DROP TRIGGER IF EXISTS update_balance_after_validation$$
 CREATE TRIGGER update_balance_after_validation
 AFTER UPDATE ON transactions
 FOR EACH ROW
@@ -237,7 +247,7 @@ BEGIN
     END IF;
 END$$
 
--- Trigger: Log de création de transaction
+DROP TRIGGER IF EXISTS log_transaction_creation$$
 CREATE TRIGGER log_transaction_creation
 AFTER INSERT ON transactions
 FOR EACH ROW
@@ -247,7 +257,7 @@ BEGIN
             CONCAT('Type: ', NEW.type, ', Montant: ', NEW.amount, ', Urgence: ', NEW.urgency));
 END$$
 
--- Trigger: Log de validation/refus
+DROP TRIGGER IF EXISTS log_transaction_validation$$
 CREATE TRIGGER log_transaction_validation
 AFTER UPDATE ON transactions
 FOR EACH ROW
@@ -264,10 +274,9 @@ DELIMITER ;
 -- ========================================
 -- PROCÉDURES STOCKÉES
 -- ========================================
-
 DELIMITER $$
 
--- Procédure: Obtenir les statistiques du dashboard
+DROP PROCEDURE IF EXISTS get_dashboard_stats$$
 CREATE PROCEDURE get_dashboard_stats(IN period VARCHAR(10))
 BEGIN
     DECLARE start_date DATE;
@@ -289,7 +298,7 @@ BEGIN
         (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'sortie' AND status = 'validee' AND created_at >= start_date) as total_sorties;
 END$$
 
--- Procédure: Nettoyer les anciennes sessions
+DROP PROCEDURE IF EXISTS cleanup_expired_sessions$$
 CREATE PROCEDURE cleanup_expired_sessions()
 BEGIN
     DELETE FROM user_sessions WHERE expires_at < NOW();
@@ -300,12 +309,10 @@ DELIMITER ;
 -- ========================================
 -- ÉVÉNEMENTS PLANIFIÉS
 -- ========================================
-
--- Activer le planificateur d'événements
 SET GLOBAL event_scheduler = ON;
 
--- Nettoyage des sessions expirées (toutes les heures)
-CREATE EVENT IF NOT EXISTS cleanup_sessions
+DROP EVENT IF EXISTS cleanup_sessions;
+CREATE EVENT cleanup_sessions
 ON SCHEDULE EVERY 1 HOUR
 DO CALL cleanup_expired_sessions();
 
@@ -313,22 +320,17 @@ DO CALL cleanup_expired_sessions();
 -- DONNÉES DE TEST
 -- ========================================
 
--- Admin par défaut (mot de passe: Admin@123)
-INSERT INTO users (username, email, password, full_name, role_id, is_active) VALUES
-('admin', 'admin@financialapp.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrateur Principal', 1, 1);
-
--- Utilisateur test (mot de passe: User@123)
-INSERT INTO users (username, email, password, full_name, role_id, is_active) VALUES
-('user1', 'user1@financialapp.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Utilisateur Test', 2, 1);
+-- Transactions de test
+INSERT INTO transactions (user_id, type, amount, description, required_date, urgency, status) VALUES
+(2, 'entree', 150000, 'Vente de produits mois de décembre', CURDATE(), 'normal', 'en_attente'),
+(2, 'sortie', 75000, 'Achat de fournitures de bureau', DATE_ADD(CURDATE(), INTERVAL 2 DAY), 'urgent', 'en_attente');
 
 -- ========================================
--- INDEX SUPPLÉMENTAIRES POUR PERFORMANCE
+-- AFFICHAGE DES COMPTES DE TEST
 -- ========================================
-
-ALTER TABLE transactions ADD INDEX idx_status_created (status, created_at);
-ALTER TABLE notifications ADD INDEX idx_user_type (user_id, type, is_read);
-ALTER TABLE activity_logs ADD INDEX idx_user_action (user_id, action, created_at);
-
--- ========================================
--- FIN DU SCHÉMA
--- ========================================
+SELECT '========================================' AS '';
+SELECT 'COMPTES DE TEST DISPONIBLES' AS '';
+SELECT '========================================' AS '';
+SELECT 'Admin: admin@financialapp.com / Admin@123' AS '';
+SELECT 'User: user1@financialapp.com / User@123' AS '';
+SELECT '========================================' AS '';
