@@ -9,7 +9,7 @@ if (isLoggedIn()) {
 
 $errors = [];
 $success = false;
-$step = $_GET['step'] ?? '1'; // Étape 1 : formulaire, Étape 2 : vérification OTP
+$step = $_GET['step'] ?? '1';
 
 // ÉTAPE 1 : SOUMISSION DU FORMULAIRE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '1') {
@@ -93,6 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '1') {
                 $otpResult = sendOTP($email, 'registration');
                 
                 if ($otpResult['success']) {
+                    // ✅ STOCKER LE CODE DEBUG EN SESSION
+                    if (isset($otpResult['debug_code'])) {
+                        $_SESSION['debug_otp_code'] = $otpResult['debug_code'];
+                    }
+                    
                     header('Location: register.php?step=2');
                     exit();
                 } else {
@@ -163,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '2') {
                         
                         $success = true;
                         unset($_SESSION['registration_data']);
+                        unset($_SESSION['debug_otp_code']); // ✅ Nettoyer le code debug
                     } else {
                         $errors[] = "Une erreur est survenue lors de la création du compte";
                     }
@@ -240,6 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '2') {
             <?php endif; ?>
 
             <?php if ($step === '1'): ?>
+                <!-- ÉTAPE 1 : FORMULAIRE D'INSCRIPTION -->
                 <!-- ÉTAPE 1 : FORMULAIRE D'INSCRIPTION -->
                 <form method="POST" action="?step=1" class="<?php echo $success ? 'opacity-50 pointer-events-none' : ''; ?>">
                     <div class="space-y-6">
@@ -335,9 +342,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '2') {
                         Continuer
                     </button>
                 </form>
-
             <?php else: ?>
-                <!-- ÉTAPE 2 : VÉRIFICATION OTP -->
+                <!-- ÉTAPE 2 : VÉRIFICATION OTP AVEC AFFICHAGE DEBUG -->
                 <form method="POST" action="?step=2">
                     <div class="text-center mb-6">
                         <svg class="mx-auto h-20 w-20 text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,22 +351,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $step === '2') {
                         </svg>
                         <h2 class="text-xl font-bold text-gray-900 mb-2">Vérifiez votre email</h2>
                         <p class="text-gray-600">Entrez le code à 6 chiffres que nous vous avons envoyé</p>
+                        
+                        <!-- ✅ AFFICHAGE DU CODE EN MODE DÉVELOPPEMENT -->
+                        <?php if (isset($_SESSION['debug_otp_code'])): ?>
+                            <div class="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg animate-pulse">
+                                <p class="text-sm font-bold text-yellow-800 mb-2">🔧 MODE DÉVELOPPEMENT</p>
+                                <p class="text-2xl font-mono font-bold text-yellow-900">
+                                    Votre code : <?php echo $_SESSION['debug_otp_code']; ?>
+                                </p>
+                                <p class="text-xs text-yellow-700 mt-2">
+                                    ⚠️ Ce message ne s'affiche qu'en environnement localhost
+                                </p>
+                                <p class="text-xs text-yellow-600 mt-1">
+                                    En production, le code sera envoyé par email uniquement
+                                </p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="mb-6">
                         <label for="otp" class="block text-sm font-medium text-gray-700 mb-2 text-center">Code de vérification</label>
-                        <input type="text" id="otp" name="otp" required maxlength="6" pattern="[0-9]{6}" class="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-center text-2xl tracking-widest font-mono" placeholder="000000" autofocus>
+                        <input type="text" id="otp" name="otp" required maxlength="6" pattern="[0-9]{6}" 
+                               class="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition text-center text-2xl tracking-widest font-mono" 
+                               placeholder="000000" autofocus>
                         <p class="text-xs text-gray-500 mt-2 text-center">Le code expire dans 10 minutes</p>
                     </div>
 
                     <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 focus:ring-4 focus:ring-green-300 transition transform hover:scale-105">
-                        Vérifier et créer mon compte
+                        ✅ Vérifier et créer mon compte
                     </button>
 
-                    <div class="mt-4 text-center">
+                    <div class="mt-4 text-center space-y-2">
                         <button type="button" onclick="window.location.href='register.php?step=1'" class="text-sm text-gray-600 hover:text-green-600">
                             ← Retour au formulaire
                         </button>
+                        <p class="text-xs text-gray-500">
+                            Vous n'avez pas reçu le code ? Vérifiez vos spams ou recommencez l'inscription
+                        </p>
                     </div>
                 </form>
             <?php endif; ?>
