@@ -1,6 +1,6 @@
 <?php
 // ========================================
-// SYSTÈME OTP (One-Time Password)
+// SYSTÈME OTP (One-Time Password) - VERSION CORRIGÉE
 // Pour vérification email lors de l'inscription et reset password
 // ========================================
 
@@ -12,7 +12,7 @@ function generateOTP() {
 }
 
 /**
- * Envoyer un OTP par email
+ * Envoyer un OTP par email - VERSION CORRIGÉE AVEC DEBUG
  */
 function sendOTP($email, $type = 'registration') {
     $code = generateOTP();
@@ -34,15 +34,25 @@ function sendOTP($email, $type = 'registration') {
         
         // Envoyer l'email
         $subject = ($type === 'registration') 
-            ? "Code de verification - " . SITE_NAME 
-            : "Code de reinitialisation - " . SITE_NAME;
+            ? "Code de vérification - " . SITE_NAME 
+            : "Code de réinitialisation - " . SITE_NAME;
         
         $body = getOTPEmailTemplate($code, $type);
         
         if (sendEmail($email, $subject, $body, true)) {
+            // Détecter l'environnement de développement
+            $isLocalhost = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']) 
+                           || in_array($_SERVER['SERVER_ADDR'] ?? '', ['localhost', '127.0.0.1']);
+            
+            // En mode développement, logger le code et le retourner
+            if ($isLocalhost) {
+                error_log("🔑 CODE OTP POUR $email : $code (Type: $type)");
+            }
+            
             return array(
                 'success' => true,
-                'message' => "Un code de verification a ete envoye a votre adresse email."
+                'message' => "Un code de vérification a été envoyé à votre adresse email.",
+                'debug_code' => $isLocalhost ? $code : null // Retourner le code seulement en dev
             );
         } else {
             throw new Exception("Erreur lors de l'envoi de l'email");
@@ -82,12 +92,12 @@ function verifyOTP($email, $code, $type = 'registration') {
             
             return array(
                 'success' => true,
-                'message' => "Code verifie avec succes."
+                'message' => "Code vérifié avec succès."
             );
         } else {
             return array(
                 'success' => false,
-                'message' => "Code invalide ou expire."
+                'message' => "Code invalide ou expiré."
             );
         }
         
@@ -95,7 +105,7 @@ function verifyOTP($email, $code, $type = 'registration') {
         error_log("Erreur verifyOTP: " . $e->getMessage());
         return array(
             'success' => false,
-            'message' => "Une erreur est survenue lors de la verification."
+            'message' => "Une erreur est survenue lors de la vérification."
         );
     }
 }
@@ -126,12 +136,12 @@ function isEmailVerified($email, $type = 'registration') {
  * Template HTML pour l'email OTP
  */
 function getOTPEmailTemplate($code, $type) {
-    $title = ($type === 'registration') ? 'Verification de votre email' : 'Reinitialisation de mot de passe';
+    $title = ($type === 'registration') ? 'Vérification de votre email' : 'Réinitialisation de mot de passe';
     $message = ($type === 'registration') 
-        ? 'Bienvenue ! Veuillez utiliser le code ci-dessous pour verifier votre adresse email et activer votre compte.'
-        : 'Vous avez demande la reinitialisation de votre mot de passe. Utilisez le code ci-dessous pour continuer.';
+        ? 'Bienvenue ! Veuillez utiliser le code ci-dessous pour vérifier votre adresse email et activer votre compte.'
+        : 'Vous avez demandé la réinitialisation de votre mot de passe. Utilisez le code ci-dessous pour continuer.';
     
-    $siteName = defined('SITE_NAME') ? SITE_NAME : 'Gestion Financiere';
+    $siteName = defined('SITE_NAME') ? SITE_NAME : 'Gestion Financière';
     $currentYear = date('Y');
     
     return "
@@ -212,7 +222,7 @@ function getOTPEmailTemplate($code, $type) {
                 <p>{$message}</p>
                 
                 <div class='otp-code'>
-                    <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 14px;'>Votre code de verification :</p>
+                    <p style='margin: 0 0 10px 0; color: #6b7280; font-size: 14px;'>Votre code de vérification :</p>
                     <div class='code'>{$code}</div>
                 </div>
                 
@@ -221,21 +231,21 @@ function getOTPEmailTemplate($code, $type) {
                     <ul style='margin: 10px 0; padding-left: 20px;'>
                         <li>Ce code expire dans <strong>10 minutes</strong></li>
                         <li>Ne partagez jamais ce code avec qui que ce soit</li>
-                        <li>Si vous n avez pas demande ce code, ignorez cet email</li>
+                        <li>Si vous n'avez pas demandé ce code, ignorez cet email</li>
                     </ul>
                 </div>
                 
                 <p style='margin-top: 30px;'>
-                    Si vous avez des questions, n hesitez pas a nous contacter.
+                    Si vous avez des questions, n'hésitez pas à nous contacter.
                 </p>
             </div>
             
             <div class='footer'>
                 <p style='margin: 0;'>
-                    © {$currentYear} {$siteName}. Tous droits reserves.
+                    © {$currentYear} {$siteName}. Tous droits réservés.
                 </p>
                 <p style='margin: 10px 0 0 0;'>
-                    Cet email a ete envoye automatiquement, merci de ne pas y repondre.
+                    Cet email a été envoyé automatiquement, merci de ne pas y répondre.
                 </p>
             </div>
         </div>

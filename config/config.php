@@ -41,33 +41,30 @@ define('EXPORT_PATH', ROOT_PATH . '/exports/');
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_USER', 'noreply@financeflow.com');
-define('SMTP_PASS', 'your_password'); // À configurer
+define('SMTP_PASS', 'your_password');
 define('FROM_EMAIL', 'noreply@financeflow.com');
 define('FROM_NAME', 'Gestion Financière');
 
 // ========================================
 // SMS & WHATSAPP CONFIGURATION
 // ========================================
-// Option 1 : Twilio
 define('TWILIO_ACCOUNT_SID', 'your_account_sid');
 define('TWILIO_AUTH_TOKEN', 'your_auth_token');
 define('TWILIO_PHONE_NUMBER', '+1234567890');
-
-// Option 2 : API WhatsApp (à configurer selon votre fournisseur)
 define('WHATSAPP_API_URL', 'https://api.whatsapp.com/send');
 define('WHATSAPP_API_TOKEN', 'your_whatsapp_token');
 
 // ========================================
 // PARAMÈTRES DE NOTIFICATION URGENTE
 // ========================================
-define('URGENT_NOTIFICATION_INTERVAL', 600); // 10 minutes (600 secondes)
-define('MAX_URGENT_NOTIFICATIONS', 50); // Nombre maximum de notifications répétées
+define('URGENT_NOTIFICATION_INTERVAL', 600); // 10 minutes
+define('MAX_URGENT_NOTIFICATIONS', 50);
 
 // ========================================
 // PARAMÈTRES DE SÉCURITÉ
 // ========================================
 define('PASSWORD_MIN_LENGTH', 8);
-define('OTP_EXPIRY', 600); // 10 minutes pour OTP
+define('OTP_EXPIRY', 600); // 10 minutes
 define('RESET_TOKEN_EXPIRY', 3600); // 1 heure
 define('REMEMBER_ME_EXPIRY', 2592000); // 30 jours
 define('MAX_LOGIN_ATTEMPTS', 5);
@@ -100,9 +97,6 @@ function getDB() {
 // GESTION DE SESSION
 // ========================================
 
-/**
- * Vérifier la session et le timeout
- */
 function checkSessionTimeout() {
     if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > SESSION_TIMEOUT)) {
         session_unset();
@@ -113,23 +107,14 @@ function checkSessionTimeout() {
     return true;
 }
 
-/**
- * Vérifier si l'utilisateur est connecté
- */
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && checkSessionTimeout();
 }
 
-/**
- * Vérifier si l'utilisateur est admin
- */
 function isAdmin() {
     return isLoggedIn() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 }
 
-/**
- * Rediriger si non connecté
- */
 function requireLogin() {
     if (!isLoggedIn()) {
         header('Location: ' . SITE_URL . '/auth/login.php');
@@ -137,9 +122,6 @@ function requireLogin() {
     }
 }
 
-/**
- * Rediriger si non admin
- */
 function requireAdmin() {
     requireLogin();
     if (!isAdmin()) {
@@ -152,9 +134,6 @@ function requireAdmin() {
 // PROTECTION CSRF
 // ========================================
 
-/**
- * Générer un token CSRF
- */
 function generateCSRFToken() {
     if (!isset($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -162,9 +141,6 @@ function generateCSRFToken() {
     return $_SESSION['csrf_token'];
 }
 
-/**
- * Vérifier un token CSRF
- */
 function verifyCSRFToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
@@ -173,9 +149,6 @@ function verifyCSRFToken($token) {
 // FONCTIONS DE SÉCURITÉ
 // ========================================
 
-/**
- * Nettoyer les entrées
- */
 function cleanInput($data) {
     $data = trim($data);
     $data = stripslashes($data);
@@ -183,9 +156,6 @@ function cleanInput($data) {
     return $data;
 }
 
-/**
- * Logger les activités
- */
 function logActivity($userId, $action, $tableName = null, $recordId = null, $details = null) {
     try {
         $db = getDB();
@@ -208,13 +178,30 @@ function logActivity($userId, $action, $tableName = null, $recordId = null, $det
 }
 
 // ========================================
-// FONCTIONS D'ENVOI EMAIL
+// FONCTIONS D'ENVOI EMAIL - CORRIGÉE
 // ========================================
 
 /**
- * Envoyer un email
+ * Envoyer un email (compatible localhost)
  */
 function sendEmail($to, $subject, $body, $isHTML = true) {
+    // Détecter l'environnement de développement
+    $isLocalhost = in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1']) 
+                   || in_array($_SERVER['SERVER_ADDR'] ?? '', ['localhost', '127.0.0.1']);
+    
+    if ($isLocalhost) {
+        // MODE DÉVELOPPEMENT : Logger l'email au lieu de l'envoyer
+        error_log("========== EMAIL SIMULÉ ==========");
+        error_log("Destinataire: $to");
+        error_log("Sujet: $subject");
+        error_log("Corps: " . strip_tags($body));
+        error_log("==================================");
+        
+        // Retourner true pour simuler un envoi réussi
+        return true;
+    }
+    
+    // MODE PRODUCTION : Utiliser la vraie fonction mail()
     $headers = "From: " . FROM_NAME . " <" . FROM_EMAIL . ">\r\n";
     $headers .= "Reply-To: " . FROM_EMAIL . "\r\n";
     $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
@@ -231,30 +218,18 @@ function sendEmail($to, $subject, $body, $isHTML = true) {
 // FONCTIONS DE FORMATAGE
 // ========================================
 
-/**
- * Formater un montant en FCFA
- */
 function formatAmount($amount) {
     return number_format($amount, 0, ',', ' ') . ' FCFA';
 }
 
-/**
- * Formater une date
- */
 function formatDate($date, $format = 'd/m/Y') {
     return date($format, strtotime($date));
 }
 
-/**
- * Formater une date et heure
- */
 function formatDateTime($datetime, $format = 'd/m/Y H:i') {
     return date($format, strtotime($datetime));
 }
 
-/**
- * Générer un code de reçu unique
- */
 function generateReceiptNumber() {
     return 'REC-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
 }
@@ -263,19 +238,13 @@ function generateReceiptNumber() {
 // MESSAGES FLASH
 // ========================================
 
-/**
- * Définir un message flash
- */
 function setFlashMessage($type, $message) {
     $_SESSION['flash_message'] = [
-        'type' => $type, // success, error, warning, info
+        'type' => $type,
         'message' => $message
     ];
 }
 
-/**
- * Obtenir un message flash
- */
 function getFlashMessage() {
     if (isset($_SESSION['flash_message'])) {
         $flash = $_SESSION['flash_message'];
@@ -289,9 +258,6 @@ function getFlashMessage() {
 // FONCTIONS DE LABELS
 // ========================================
 
-/**
- * Obtenir la couleur d'un statut
- */
 function getStatusColor($status) {
     $colors = [
         'en_attente' => 'yellow',
@@ -301,9 +267,6 @@ function getStatusColor($status) {
     return $colors[$status] ?? 'gray';
 }
 
-/**
- * Obtenir le label d'un statut
- */
 function getStatusLabel($status) {
     $labels = [
         'en_attente' => 'En attente',
@@ -313,16 +276,10 @@ function getStatusLabel($status) {
     return $labels[$status] ?? $status;
 }
 
-/**
- * Obtenir le label d'un type
- */
 function getTypeLabel($type) {
     return $type === 'entree' ? 'Entrée' : 'Sortie';
 }
 
-/**
- * Obtenir le label d'une urgence
- */
 function getUrgencyLabel($urgency) {
     return $urgency === 'urgent' ? 'Urgent' : 'Normal';
 }
