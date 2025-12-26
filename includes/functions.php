@@ -111,12 +111,12 @@ function formatDateTime($datetime, $format = 'd/m/Y H:i') {
 /**
  * Nettoyer les entrées utilisateur
  */
-function cleanInput($data) {
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
-    return $data;
-}
+// function cleanInput($data) {
+//     $data = trim($data);
+//     $data = stripslashes($data);
+//     $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+//     return $data;
+// }
 
 /**
  * Générer un numéro de reçu
@@ -719,18 +719,18 @@ function getDashboardStats($period = 'day') {
 /**
  * Messages flash
  */
-function setFlashMessage($type, $message) {
-    $_SESSION['flash_message'] = [
-        'type' => $type,
-        'message' => $message
-    ];
-}
+// function setFlashMessage($type, $message) {
+//     $_SESSION['flash_message'] = [
+//         'type' => $type,
+//         'message' => $message
+//     ];
+// }
 
-function getFlashMessage() {
-    if (isset($_SESSION['flash_message'])) {
-        $flash = $_SESSION['flash_message'];
-        unset($_SESSION['flash_message']);
-        return $flash;
-    }
-    return null;
-}
+// function getFlashMessage() {
+//     if (isset($_SESSION['flash_message'])) {
+//         $flash = $_SESSION['flash_message'];
+//         unset($_SESSION['flash_message']);
+//         return $flash;
+//     }
+//     return null;
+// }

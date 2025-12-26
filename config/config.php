@@ -146,7 +146,7 @@ function verifyCSRFToken($token) {
 }
 
 // ========================================
-// FONCTIONS DE SÉCURITÉ
+// FONCTIONS DE SÉCURITÉ BASIQUES
 // ========================================
 
 function cleanInput($data) {
@@ -178,7 +178,7 @@ function logActivity($userId, $action, $tableName = null, $recordId = null, $det
 }
 
 // ========================================
-// FONCTIONS D'ENVOI EMAIL - CORRIGÉE
+// FONCTION D'ENVOI EMAIL - CORRIGÉE
 // ========================================
 
 /**
@@ -215,27 +215,7 @@ function sendEmail($to, $subject, $body, $isHTML = true) {
 }
 
 // ========================================
-// FONCTIONS DE FORMATAGE
-// ========================================
-
-function formatAmount($amount) {
-    return number_format($amount, 0, ',', ' ') . ' FCFA';
-}
-
-function formatDate($date, $format = 'd/m/Y') {
-    return date($format, strtotime($date));
-}
-
-function formatDateTime($datetime, $format = 'd/m/Y H:i') {
-    return date($format, strtotime($datetime));
-}
-
-function generateReceiptNumber() {
-    return 'REC-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
-}
-
-// ========================================
-// MESSAGES FLASH
+// MESSAGES FLASH (fonctions de base seulement)
 // ========================================
 
 function setFlashMessage($type, $message) {
@@ -255,37 +235,8 @@ function getFlashMessage() {
 }
 
 // ========================================
-// FONCTIONS DE LABELS
-// ========================================
-
-function getStatusColor($status) {
-    $colors = [
-        'en_attente' => 'yellow',
-        'validee' => 'green',
-        'refusee' => 'red'
-    ];
-    return $colors[$status] ?? 'gray';
-}
-
-function getStatusLabel($status) {
-    $labels = [
-        'en_attente' => 'En attente',
-        'validee' => 'Validée',
-        'refusee' => 'Refusée'
-    ];
-    return $labels[$status] ?? $status;
-}
-
-function getTypeLabel($type) {
-    return $type === 'entree' ? 'Entrée' : 'Sortie';
-}
-
-function getUrgencyLabel($urgency) {
-    return $urgency === 'urgent' ? 'Urgent' : 'Normal';
-}
-
-// ========================================
 // CHARGER LES FONCTIONS MÉTIER
+// (Toutes les autres fonctions sont dans functions.php)
 // ========================================
 require_once ROOT_PATH . '/includes/functions.php';
 require_once ROOT_PATH . '/includes/otp.php';
