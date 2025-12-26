@@ -27,8 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_balance'])) {
 
 $currentBalance = getCurrentBalance();
 
-// Historique des modifications - CORRECTION DE LA REQUÊTE
+// Historique des modifications - CORRECTION COMPLÈTE
 $db = getDB();
+$history = [];
 try {
     $historyStmt = $db->query("
         SELECT 
@@ -49,10 +50,9 @@ try {
     $history = $historyStmt->fetchAll();
 } catch (Exception $e) {
     error_log("Erreur historique balance: " . $e->getMessage());
-    $history = [];
     if (empty($message)) {
-        $message = "Erreur lors du chargement de l'historique";
-        $messageType = 'error';
+        $message = "Note: L'historique n'est pas disponible pour le moment";
+        $messageType = 'warning';
     }
 }
 
@@ -65,9 +65,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gérer le solde - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <!-- Navigation -->
@@ -89,6 +87,15 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
                     <a href="balance.php" class="text-green-600 dark:text-green-400 font-medium">Gérer Solde</a>
                     
+                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                        <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                    
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
                             <p class="text-sm font-medium text-gray-700 dark:text-gray-300"><?php echo $_SESSION['full_name']; ?></p>
@@ -109,8 +116,8 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
         <h1 class="text-3xl font-bold mb-8 text-gray-900 dark:text-white">💰 Gérer le solde global</h1>
         
         <?php if ($message): ?>
-            <div class="mb-6 p-4 rounded-lg <?php echo $messageType === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500' : 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500'; ?>">
-                <p class="text-sm <?php echo $messageType === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'; ?>">
+            <div class="mb-6 p-4 rounded-lg <?php echo $messageType === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500' : ($messageType === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500' : 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500'); ?>">
+                <p class="text-sm <?php echo $messageType === 'success' ? 'text-green-700 dark:text-green-300' : ($messageType === 'warning' ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'); ?>">
                     <?php echo $message; ?>
                 </p>
             </div>
@@ -203,6 +210,9 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             </div>
             <?php else: ?>
             <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
                 <p>Aucun historique disponible</p>
             </div>
             <?php endif; ?>

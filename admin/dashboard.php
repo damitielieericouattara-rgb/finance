@@ -8,34 +8,26 @@ $db = getDB();
 
 // Récupérer les statistiques
 try {
-    // Solde actuel
     $currentBalance = getCurrentBalance();
     
-    // Nombre total de transactions
     $stmt = $db->query("SELECT COUNT(*) as total FROM transactions");
     $totalTransactions = $stmt->fetch()['total'];
     
-    // Transactions en attente
     $stmt = $db->query("SELECT COUNT(*) as total FROM transactions WHERE status = 'en_attente'");
     $pendingTransactions = $stmt->fetch()['total'];
     
-    // Transactions validées ce mois
     $stmt = $db->query("SELECT COUNT(*) as total FROM transactions WHERE status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
     $monthValidated = $stmt->fetch()['total'];
     
-    // Total des entrées ce mois
     $stmt = $db->query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'entree' AND status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
     $monthIncome = $stmt->fetch()['total'];
     
-    // Total des sorties ce mois
     $stmt = $db->query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'sortie' AND status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
     $monthExpenses = $stmt->fetch()['total'];
     
-    // Nombre d'utilisateurs actifs
     $stmt = $db->query("SELECT COUNT(*) as total FROM users WHERE is_active = 1");
     $activeUsers = $stmt->fetch()['total'];
     
-    // Dernières transactions
     $stmt = $db->query("
         SELECT t.*, u.full_name as user_name 
         FROM transactions t
@@ -45,7 +37,6 @@ try {
     ");
     $recentTransactions = $stmt->fetchAll();
     
-    // Transactions par statut
     $stmt = $db->query("
         SELECT status, COUNT(*) as count 
         FROM transactions 
@@ -75,12 +66,9 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
-    <!-- Navigation -->
     <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -143,7 +131,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
 
         <!-- Statistiques principales -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Solde actuel -->
             <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-white bg-opacity-20 rounded-lg">
@@ -158,7 +145,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 </div>
             </div>
 
-            <!-- Transactions en attente -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
@@ -176,7 +162,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 </div>
             </div>
 
-            <!-- Entrées du mois -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -192,7 +177,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 </div>
             </div>
 
-            <!-- Sorties du mois -->
             <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                 <div class="flex items-center justify-between mb-4">
                     <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
@@ -326,47 +310,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
         </div>
     </div>
 
-    <script>
-        // Gestion du thème sombre
-        (function() {
-            const themeToggle = document.getElementById('themeToggle');
-            const htmlElement = document.documentElement;
-            
-            // Charger le thème sauvegardé
-            function loadTheme() {
-                const savedTheme = localStorage.getItem('theme');
-                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    htmlElement.classList.add('dark');
-                } else {
-                    htmlElement.classList.remove('dark');
-                }
-            }
-            
-            // Basculer le thème
-            function toggleTheme() {
-                htmlElement.classList.toggle('dark');
-                const isDark = htmlElement.classList.contains('dark');
-                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                
-                // Animation
-                document.body.style.transition = 'background-color 0.3s ease';
-                setTimeout(() => {
-                    document.body.style.transition = '';
-                }, 300);
-            }
-            
-            // Initialiser
-            loadTheme();
-            
-            // Event listener
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    toggleTheme();
-                });
-            }
-        })();
-    </script>
     <script src="../assets/js/theme.js"></script>
 </body>
 </html>
