@@ -257,5 +257,6 @@ $flash = getFlashMessage();
             </div>
         </div>
     </div>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

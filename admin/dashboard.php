@@ -4,53 +4,84 @@ require_once '../includes/functions.php';
 
 requireAdmin();
 
-$period = $_GET['period'] ?? 'day';
-$stats = getDashboardStats($period);
-$currentBalance = getCurrentBalance();
-$chartData = getChartData('month');
-
-// Récupérer les transactions urgentes en attente
 $db = getDB();
-$urgentStmt = $db->query("
-    SELECT t.*, u.full_name as user_name 
-    FROM transactions t
-    LEFT JOIN users u ON t.user_id = u.id
-    WHERE t.status = 'en_attente' AND t.urgency = 'urgent'
-    ORDER BY t.created_at ASC
-    LIMIT 5
-");
-$urgentTransactions = $urgentStmt->fetchAll();
 
-// Récupérer les dernières transactions
-$recentStmt = $db->query("
-    SELECT t.*, u.full_name as user_name 
-    FROM transactions t
-    LEFT JOIN users u ON t.user_id = u.id
-    ORDER BY t.created_at DESC
-    LIMIT 10
-");
-$recentTransactions = $recentStmt->fetchAll();
+// Récupérer les statistiques
+try {
+    // Solde actuel
+    $currentBalance = getCurrentBalance();
+    
+    // Nombre total de transactions
+    $stmt = $db->query("SELECT COUNT(*) as total FROM transactions");
+    $totalTransactions = $stmt->fetch()['total'];
+    
+    // Transactions en attente
+    $stmt = $db->query("SELECT COUNT(*) as total FROM transactions WHERE status = 'en_attente'");
+    $pendingTransactions = $stmt->fetch()['total'];
+    
+    // Transactions validées ce mois
+    $stmt = $db->query("SELECT COUNT(*) as total FROM transactions WHERE status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
+    $monthValidated = $stmt->fetch()['total'];
+    
+    // Total des entrées ce mois
+    $stmt = $db->query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'entree' AND status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
+    $monthIncome = $stmt->fetch()['total'];
+    
+    // Total des sorties ce mois
+    $stmt = $db->query("SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'sortie' AND status = 'validee' AND MONTH(validated_at) = MONTH(CURRENT_DATE) AND YEAR(validated_at) = YEAR(CURRENT_DATE)");
+    $monthExpenses = $stmt->fetch()['total'];
+    
+    // Nombre d'utilisateurs actifs
+    $stmt = $db->query("SELECT COUNT(*) as total FROM users WHERE is_active = 1");
+    $activeUsers = $stmt->fetch()['total'];
+    
+    // Dernières transactions
+    $stmt = $db->query("
+        SELECT t.*, u.full_name as user_name 
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        ORDER BY t.created_at DESC
+        LIMIT 10
+    ");
+    $recentTransactions = $stmt->fetchAll();
+    
+    // Transactions par statut
+    $stmt = $db->query("
+        SELECT status, COUNT(*) as count 
+        FROM transactions 
+        GROUP BY status
+    ");
+    $transactionsByStatus = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    
+} catch (Exception $e) {
+    error_log("Erreur dashboard admin: " . $e->getMessage());
+    $currentBalance = 0;
+    $totalTransactions = 0;
+    $pendingTransactions = 0;
+    $monthValidated = 0;
+    $monthIncome = 0;
+    $monthExpenses = 0;
+    $activeUsers = 0;
+    $recentTransactions = [];
+    $transactionsByStatus = [];
+}
 
 $unreadCount = countUnreadNotifications($_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: {} }
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-    <!-- Navigation FIXE avec mode sombre -->
-    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50 transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-900">
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
@@ -62,37 +93,31 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 </div>
                 
                 <div class="flex items-center space-x-4">
-                    <a href="dashboard.php" class="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium">
-                        Dashboard
-                    </a>
-                    <a href="transactions.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
-                        Transactions
-                    </a>
-                    <a href="users.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
-                        Utilisateurs
-                    </a>
-                    <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
-                        Rapports
-                    </a>
-                    <a href="balance.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
-                        Gérer Solde
-                    </a>
+                    <a href="dashboard.php" class="text-green-600 dark:text-green-400 font-medium">Dashboard</a>
+                    <a href="transactions.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Transactions</a>
+                    <a href="users.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Utilisateurs</a>
+                    <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
+                    <a href="balance.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Gérer Solde</a>
                     
-                    <div class="relative">
-                        <button id="notificationBtn" data-notification-toggle class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                            </svg>
-                            <span data-notification-badge class="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center <?php echo $unreadCount > 0 ? '' : 'hidden'; ?>">
+                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                        <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                    
+                    <a href="../includes/notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <?php if ($unreadCount > 0): ?>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                                 <?php echo $unreadCount; ?>
                             </span>
-                        </button>
-                        
-                        <!-- Dropdown notifications -->
-                        <div data-notification-dropdown class="hidden absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-96 overflow-y-auto">
-                            <!-- Contenu chargé dynamiquement -->
-                        </div>
-                    </div>
+                        <?php endif; ?>
+                    </a>
                     
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
@@ -110,48 +135,238 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- En-tête -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
         <div class="mb-8">
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Tableau de bord</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Vue d'ensemble de l'activité financière</p>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Vue d'ensemble de l'activité financière</p>
         </div>
 
-        <!-- Alertes urgentes -->
-        <?php if (!empty($urgentTransactions)): ?>
-            <div class="mb-8 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-6 rounded-lg">
-                <div class="flex items-center mb-4">
-                    <svg class="h-6 w-6 text-red-600 dark:text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                    <h3 class="text-lg font-bold text-red-900 dark:text-red-200">Demandes urgentes en attente</h3>
+        <!-- Statistiques principales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Solde actuel -->
+            <div class="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-white bg-opacity-20 rounded-lg">
+                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="space-y-3">
-                    <?php foreach ($urgentTransactions as $trans): ?>
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg flex justify-between items-center">
-                            <div>
-                                <p class="font-semibold text-gray-900 dark:text-white"><?php echo htmlspecialchars($trans['user_name']); ?></p>
-                                <p class="text-sm text-gray-600 dark:text-gray-400"><?php echo formatAmount($trans['amount']); ?> - <?php echo htmlspecialchars($trans['description']); ?></p>
-                                <p class="text-xs text-gray-500 dark:text-gray-500">Il y a <?php echo date_diff(new DateTime($trans['created_at']), new DateTime())->format('%h heures %i min'); ?></p>
-                            </div>
-                            <a href="transactions.php?id=<?php echo $trans['id']; ?>" class="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700">
-                                Traiter maintenant
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
+                <div>
+                    <p class="text-sm text-green-100 mb-1">Solde actuel</p>
+                    <p class="text-3xl font-bold"><?php echo formatAmount($currentBalance); ?></p>
                 </div>
             </div>
-        <?php endif; ?>
 
-        <!-- Reste du contenu avec classes dark mode ajoutées partout -->
-        <!-- [Le reste du code avec toutes les classes dark: ajoutées] -->
+            <!-- Transactions en attente -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+                        <svg class="h-8 w-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">En attente</p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white"><?php echo $pendingTransactions; ?></p>
+                    <a href="transactions.php?status=en_attente" class="text-sm text-green-600 dark:text-green-400 hover:underline mt-2 inline-block">
+                        Voir les demandes →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Entrées du mois -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <svg class="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Entrées ce mois</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white"><?php echo formatAmount($monthIncome); ?></p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"><?php echo $monthValidated; ?> validées</p>
+                </div>
+            </div>
+
+            <!-- Sorties du mois -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+                        <svg class="h-8 w-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Sorties ce mois</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white"><?php echo formatAmount($monthExpenses); ?></p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Balance: <?php echo formatAmount($monthIncome - $monthExpenses); ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistiques secondaires -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Transactions</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Total</span>
+                        <span class="font-bold text-gray-900 dark:text-white"><?php echo $totalTransactions; ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">En attente</span>
+                        <span class="font-bold text-yellow-600 dark:text-yellow-400"><?php echo $transactionsByStatus['en_attente'] ?? 0; ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Validées</span>
+                        <span class="font-bold text-green-600 dark:text-green-400"><?php echo $transactionsByStatus['validee'] ?? 0; ?></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Refusées</span>
+                        <span class="font-bold text-red-600 dark:text-red-400"><?php echo $transactionsByStatus['refusee'] ?? 0; ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">👥 Utilisateurs</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Actifs</span>
+                        <span class="font-bold text-green-600 dark:text-green-400"><?php echo $activeUsers; ?></span>
+                    </div>
+                    <a href="users.php" class="text-sm text-green-600 dark:text-green-400 hover:underline">
+                        Gérer les utilisateurs →
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">⚡ Actions rapides</h3>
+                <div class="space-y-2">
+                    <a href="transactions.php?status=en_attente" class="block w-full bg-green-600 text-white text-center py-2 rounded-lg hover:bg-green-700 transition">
+                        📋 Traiter les demandes
+                    </a>
+                    <a href="balance.php" class="block w-full bg-blue-600 text-white text-center py-2 rounded-lg hover:bg-blue-700 transition">
+                        💰 Gérer le solde
+                    </a>
+                    <a href="reports.php" class="block w-full bg-purple-600 text-white text-center py-2 rounded-lg hover:bg-purple-700 transition">
+                        📊 Rapports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dernières transactions -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="p-6 border-b dark:border-gray-700">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Dernières transactions</h3>
+                    <a href="transactions.php" class="text-sm text-green-600 dark:text-green-400 hover:underline">
+                        Voir tout →
+                    </a>
+                </div>
+            </div>
+            
+            <?php if (!empty($recentTransactions)): ?>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Utilisateur</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Montant</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <?php foreach ($recentTransactions as $t): ?>
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                                    <?php echo formatDateTime($t['created_at'], 'd/m/Y H:i'); ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                    <?php echo htmlspecialchars($t['user_name']); ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $t['type'] === 'entree' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'; ?>">
+                                        <?php echo $t['type'] === 'entree' ? '📈 Entrée' : '📉 Sortie'; ?>
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm font-bold text-gray-900 dark:text-gray-300">
+                                    <?php echo formatAmount($t['amount']); ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    <?php echo getStatusBadge($t['status']); ?>
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    <a href="transactions.php?id=<?php echo $t['id']; ?>" class="text-green-600 dark:text-green-400 hover:underline">
+                                        Voir détails
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php else: ?>
+            <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                <p>Aucune transaction récente</p>
+            </div>
+            <?php endif; ?>
+        </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="../assets/js/theme.js"></script>
-    <script src="../assets/js/notifications.js"></script>
     <script>
-        // Code des graphiques Chart.js...
+        // Gestion du thème sombre
+        (function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+            
+            // Charger le thème sauvegardé
+            function loadTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    htmlElement.classList.add('dark');
+                } else {
+                    htmlElement.classList.remove('dark');
+                }
+            }
+            
+            // Basculer le thème
+            function toggleTheme() {
+                htmlElement.classList.toggle('dark');
+                const isDark = htmlElement.classList.contains('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                
+                // Animation
+                document.body.style.transition = 'background-color 0.3s ease';
+                setTimeout(() => {
+                    document.body.style.transition = '';
+                }, 300);
+            }
+            
+            // Initialiser
+            loadTheme();
+            
+            // Event listener
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                });
+            }
+        })();
     </script>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

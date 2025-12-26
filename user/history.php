@@ -97,5 +97,6 @@ $totalPages = ceil($totalTransactions / 20);
             </table>
         </div>
     </div>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

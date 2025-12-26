@@ -282,5 +282,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
             </a>
         </div>
     </div>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

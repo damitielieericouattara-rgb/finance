@@ -21,24 +21,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_balance'])) {
     } catch (Exception $e) {
         $message = "Erreur lors de la mise à jour: " . $e->getMessage();
         $messageType = 'error';
+        error_log("Erreur balance: " . $e->getMessage());
     }
 }
 
 $currentBalance = getCurrentBalance();
 
-// Historique des modifications
+// Historique des modifications - CORRECTION DE LA REQUÊTE
 $db = getDB();
-$historyStmt = $db->query("
-    SELECT bh.*, u.full_name as admin_name
-    FROM balance_history bh
-    LEFT JOIN users u ON bh.admin_id = u.id
-    ORDER BY bh.created_at DESC
-    LIMIT 20
-");
-$history = $historyStmt->fetchAll();
+try {
+    $historyStmt = $db->query("
+        SELECT 
+            bh.id,
+            bh.transaction_id,
+            bh.previous_balance,
+            bh.new_balance,
+            bh.change_amount,
+            bh.change_type,
+            bh.notes,
+            bh.created_at,
+            u.full_name as admin_name
+        FROM balance_history bh
+        LEFT JOIN users u ON bh.admin_id = u.id
+        ORDER BY bh.created_at DESC
+        LIMIT 20
+    ");
+    $history = $historyStmt->fetchAll();
+} catch (Exception $e) {
+    error_log("Erreur historique balance: " . $e->getMessage());
+    $history = [];
+    if (empty($message)) {
+        $message = "Erreur lors du chargement de l'historique";
+        $messageType = 'error';
+    }
+}
+
+$unreadCount = countUnreadNotifications($_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,9 +70,39 @@ $history = $historyStmt->fetchAll();
     </script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
-    <!-- Navigation identique -->
+    <!-- Navigation -->
     <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
-        <!-- ... Navigation complète ... -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="ml-3 text-xl font-bold text-green-600 dark:text-green-400"><?php echo SITE_NAME; ?></span>
+                    <span class="ml-4 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-semibold rounded-full">ADMIN</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="dashboard.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Dashboard</a>
+                    <a href="transactions.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Transactions</a>
+                    <a href="users.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Utilisateurs</a>
+                    <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
+                    <a href="balance.php" class="text-green-600 dark:text-green-400 font-medium">Gérer Solde</a>
+                    
+                    <div class="flex items-center space-x-2">
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300"><?php echo $_SESSION['full_name']; ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Administrateur</p>
+                        </div>
+                        <a href="../auth/logout.php" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2" title="Déconnexion">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
@@ -97,7 +148,7 @@ $history = $historyStmt->fetchAll();
                         </div>
 
                         <button type="submit" name="update_balance"
-                                class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700">
+                                class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
                             💾 Enregistrer le nouveau solde
                         </button>
                     </div>
@@ -110,6 +161,8 @@ $history = $historyStmt->fetchAll();
             <div class="p-6 border-b dark:border-gray-700">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Historique des modifications</h3>
             </div>
+            
+            <?php if (!empty($history)): ?>
             <div class="overflow-x-auto">
                 <table class="min-w-full">
                     <thead class="bg-gray-50 dark:bg-gray-700">
@@ -148,6 +201,11 @@ $history = $historyStmt->fetchAll();
                     </tbody>
                 </table>
             </div>
+            <?php else: ?>
+            <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                <p>Aucun historique disponible</p>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 

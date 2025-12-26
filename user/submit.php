@@ -266,5 +266,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             </form>
         </div>
     </div>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

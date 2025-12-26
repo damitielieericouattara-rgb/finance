@@ -367,10 +367,8 @@
         </div>
     </footer>
     <!-------------------------------------JavaScript----------------------------------->
-    <script src="./assets/js/notifications.js"></script>
-    <script src="./script.js"></script>
-    <script src="./assets/js/main.js"></script>
-    <script src="./assets/js/responsive.js"></script>
+    
+    <script src="../assets/js/theme.js"></script>
 
 </body>
 </html>
