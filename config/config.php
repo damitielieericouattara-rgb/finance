@@ -1,6 +1,7 @@
 <?php
 /**
- * CONFIGURATION PRINCIPALE - VERSION CORRIGÉE FINALE
+ * CONFIGURATION PRINCIPALE DE L'APPLICATION
+ * Configuration de la base de données et paramètres globaux
  */
 
 // Empêcher l'accès direct
@@ -32,18 +33,18 @@ define('UPLOAD_DIR', APP_ROOT . '/uploads');
 define('EXPORT_DIR', APP_ROOT . '/exports');
 define('EXPORT_PATH', APP_ROOT . '/exports');
 define('PDF_DIR', APP_ROOT . '/pdf');
-define('MAX_UPLOAD_SIZE', 5242880);
+define('MAX_UPLOAD_SIZE', 5242880); // 5MB
 
 // Configuration des sessions
-define('SESSION_LIFETIME', 1800);
-define('SESSION_TIMEOUT', 1800);
+define('SESSION_LIFETIME', 1800); // 30 minutes
+define('SESSION_TIMEOUT', 1800); // 30 minutes
 define('SESSION_NAME', 'FINANCIAL_APP_SESSION');
 
 // Configuration de sécurité
 define('CSRF_TOKEN_NAME', 'csrf_token');
 define('PASSWORD_MIN_LENGTH', 8);
 define('LOGIN_MAX_ATTEMPTS', 5);
-define('LOGIN_LOCKOUT_TIME', 900);
+define('LOGIN_LOCKOUT_TIME', 900); // 15 minutes
 
 // Configuration email
 define('SMTP_ENABLED', false);
@@ -55,18 +56,17 @@ define('SMTP_FROM_EMAIL', 'noreply@financialapp.com');
 define('SMTP_FROM_NAME', 'Financial App');
 
 // Configuration OTP
-define('OTP_EXPIRY', 600);
+define('OTP_EXPIRY', 600); // 10 minutes
 
 // Configuration réinitialisation mot de passe
-define('RESET_TOKEN_EXPIRY', 3600);
-define('REMEMBER_ME_EXPIRY', 2592000);
+define('RESET_TOKEN_EXPIRY', 3600); // 1 heure
 
 // Configuration notifications
-define('NOTIFICATION_POLL_INTERVAL', 30000);
-define('URGENT_NOTIFICATION_INTERVAL', 600);
+define('NOTIFICATION_POLL_INTERVAL', 30000); // 30 secondes
+define('URGENT_NOTIFICATION_INTERVAL', 600); // 10 minutes
 define('MAX_URGENT_NOTIFICATIONS', 5);
 
-// Configuration Twilio
+// Configuration Twilio (pour SMS/WhatsApp)
 define('TWILIO_ACCOUNT_SID', 'votre_account_sid');
 define('TWILIO_AUTH_TOKEN', 'votre_auth_token');
 define('TWILIO_PHONE_NUMBER', '+1234567890');
@@ -81,14 +81,16 @@ date_default_timezone_set('Africa/Abidjan');
 if (APP_ENV === 'development') {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
+    ini_set('log_errors', 1);
+    ini_set('error_log', APP_ROOT . '/logs/php_errors.log');
 } else {
     error_reporting(E_ALL);
     ini_set('display_errors', 0);
+    ini_set('log_errors', 1);
+    ini_set('error_log', APP_ROOT . '/logs/php_errors.log');
 }
-ini_set('log_errors', 1);
-ini_set('error_log', APP_ROOT . '/logs/php_errors.log');
 
-// Créer le dossier logs
+// Créer le dossier logs si nécessaire
 $logDir = APP_ROOT . '/logs';
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
@@ -111,26 +113,26 @@ try {
     die("Erreur de connexion à la base de données. Veuillez vérifier votre configuration.");
 }
 
-/**
- * Fonction pour obtenir la connexion PDO
- */
+// Fonction pour obtenir la connexion PDO (pour compatibilité)
 function getDB() {
     global $pdo;
     return $pdo;
 }
 
-// Démarrer la session
+// Démarrer la session si pas déjà démarrée
 if (session_status() === PHP_SESSION_NONE) {
     session_name(SESSION_NAME);
     session_start();
     
+    // Régénérer l'ID de session périodiquement pour la sécurité
     if (!isset($_SESSION['last_regeneration'])) {
         $_SESSION['last_regeneration'] = time();
-    } elseif (time() - $_SESSION['last_regeneration'] > 300) {
+    } elseif (time() - $_SESSION['last_regeneration'] > 300) { // 5 minutes
         session_regenerate_id(true);
         $_SESSION['last_regeneration'] = time();
     }
     
+    // Vérifier le timeout de session
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > SESSION_LIFETIME)) {
         session_unset();
         session_destroy();
@@ -142,23 +144,17 @@ if (session_status() === PHP_SESSION_NONE) {
     $_SESSION['last_activity'] = time();
 }
 
-/**
- * Vérifier si l'utilisateur est connecté
- */
+// Fonction pour vérifier si l'utilisateur est connecté
 function isLoggedIn() {
     return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
-/**
- * Vérifier si l'utilisateur est admin
- */
+// Fonction pour vérifier si l'utilisateur est admin
 function isAdmin() {
     return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 }
 
-/**
- * Obtenir l'utilisateur connecté
- */
+// Fonction pour obtenir l'utilisateur connecté
 function getCurrentUser() {
     if (!isLoggedIn()) {
         return null;
@@ -172,9 +168,7 @@ function getCurrentUser() {
     ];
 }
 
-/**
- * Vérifier le timeout de session
- */
+// Fonction pour vérifier le timeout de session
 function checkSessionTimeout() {
     if (!isset($_SESSION['last_activity'])) {
         $_SESSION['last_activity'] = time();
@@ -189,9 +183,7 @@ function checkSessionTimeout() {
     return true;
 }
 
-/**
- * Générer un token CSRF
- */
+// Fonction pour générer un token CSRF
 function generateCsrfToken() {
     if (!isset($_SESSION[CSRF_TOKEN_NAME])) {
         $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
@@ -199,16 +191,12 @@ function generateCsrfToken() {
     return $_SESSION[CSRF_TOKEN_NAME];
 }
 
-/**
- * Vérifier un token CSRF
- */
+// Fonction pour vérifier un token CSRF
 function verifyCsrfToken($token) {
     return isset($_SESSION[CSRF_TOKEN_NAME]) && hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
 }
 
-/**
- * Protéger contre XSS
- */
+// Fonction pour protéger contre XSS
 function escape($value) {
     if (is_null($value)) {
         return '';
@@ -216,9 +204,7 @@ function escape($value) {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
-/**
- * Nettoyer les entrées
- */
+// Fonction pour nettoyer les entrées
 function cleanInput($data) {
     if (is_null($data)) {
         return '';
@@ -229,9 +215,7 @@ function cleanInput($data) {
     return $data;
 }
 
-/**
- * Logger les erreurs
- */
+// Fonction pour logger les erreurs
 function logError($message, $context = []) {
     $logFile = APP_ROOT . '/logs/error.log';
     $logDir = dirname($logFile);
@@ -247,13 +231,11 @@ function logError($message, $context = []) {
     @file_put_contents($logFile, $logMessage, FILE_APPEND);
 }
 
-/**
- * Logger les activités
- */
+// Fonction pour logger les activités
 function logActivity($userId, $action, $tableName = null, $recordId = null, $details = null) {
     try {
-        $db = getDB();
-        $stmt = $db->prepare("
+        $pdo = getDB();
+        $stmt = $pdo->prepare("
             INSERT INTO activity_logs (user_id, action, table_name, record_id, details, ip_address, user_agent)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
@@ -271,9 +253,7 @@ function logActivity($userId, $action, $tableName = null, $recordId = null, $det
     }
 }
 
-/**
- * Envoyer un email
- */
+// Fonction pour envoyer un email
 function sendEmail($to, $subject, $body, $isHtml = false) {
     if (!SMTP_ENABLED) {
         error_log("Email non envoyé (SMTP désactivé) - To: $to, Subject: $subject");
@@ -299,9 +279,7 @@ function sendEmail($to, $subject, $body, $isHtml = false) {
     return mail($to, $subject, $body, $headerStr);
 }
 
-/**
- * Protections d'accès
- */
+// Protection contre les attaques
 function requireLogin() {
     if (!isLoggedIn()) {
         header('Location: ' . APP_URL . '/auth/login.php');
@@ -317,125 +295,19 @@ function requireAdmin() {
     }
 }
 
-/**
- * Formater un montant
- */
-function formatAmount($amount) {
-    return number_format($amount, 0, ',', ' ') . ' FCFA';
-}
-
-/**
- * Formater une date
- */
-function formatDate($date, $format = 'd/m/Y') {
-    if (empty($date)) return '-';
-    
-    try {
-        $dateObj = new DateTime($date);
-        return $dateObj->format($format);
-    } catch (Exception $e) {
-        return $date;
-    }
-}
-
-/**
- * Formater une date/heure
- */
-function formatDateTime($datetime, $format = 'd/m/Y H:i') {
-    if (empty($datetime)) return '-';
-    
-    try {
-        $date = new DateTime($datetime);
-        return $date->format($format);
-    } catch (Exception $e) {
-        return $datetime;
-    }
-}
-
-/**
- * Générer un numéro de reçu
- */
-function generateReceiptNumber() {
-    return 'REC-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
-}
-
-/**
- * Obtenir le solde global actuel
- */
-function getCurrentBalance() {
-    try {
-        $db = getDB();
-        $stmt = $db->query("SELECT balance FROM global_balance WHERE id = 1");
-        $result = $stmt->fetch();
-        return $result ? floatval($result['balance']) : 0;
-    } catch (Exception $e) {
-        error_log("Erreur getCurrentBalance: " . $e->getMessage());
-        return 0;
-    }
-}
-
-/**
- * Créer une notification
- */
-function createNotification($userId, $title, $message, $type = 'info', $transactionId = null) {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("
-            INSERT INTO notifications (user_id, transaction_id, title, message, type)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        return $stmt->execute([$userId, $transactionId, $title, $message, $type]);
-    } catch (Exception $e) {
-        error_log("Erreur createNotification: " . $e->getMessage());
-        return false;
-    }
-}
-
-/**
- * Compter les notifications non lues
- */
-function countUnreadNotifications($userId) {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as count FROM notifications 
-            WHERE user_id = ? AND is_read = 0
-        ");
-        $stmt->execute([$userId]);
-        $result = $stmt->fetch();
-        return $result ? intval($result['count']) : 0;
-    } catch (Exception $e) {
-        error_log("Erreur countUnreadNotifications: " . $e->getMessage());
-        return 0;
-    }
-}
-
-/**
- * Obtenir le badge HTML d'un statut
- */
-function getStatusBadge($status) {
-    $badges = [
-        'en_attente' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">⏳ En attente</span>',
-        'validee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">✅ Validée</span>',
-        'refusee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">❌ Refusée</span>',
-    ];
-    
-    return $badges[$status] ?? '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">' . htmlspecialchars($status) . '</span>';
-}
-
-/**
- * Obtenir le label d'un type de transaction
- */
-function getTypeLabel($type) {
-    $labels = [
-        'entree' => 'Entrée',
-        'sortie' => 'Sortie'
-    ];
-    return $labels[$type] ?? $type;
-}
-
-// Charger les fonctions métier supplémentaires
+// Charger les fonctions métier
 $functionsFile = APP_ROOT . '/includes/functions.php';
 if (file_exists($functionsFile)) {
     require_once $functionsFile;
+} else {
+    // Essayer un chemin alternatif
+    $altPath = dirname(__FILE__) . '/../includes/functions.php';
+    if (file_exists($altPath)) {
+        require_once $altPath;
+    } else {
+        error_log("ERREUR CRITIQUE: Le fichier functions.php n'existe pas!");
+        error_log("Chemin recherché 1: " . $functionsFile);
+        error_log("Chemin recherché 2: " . $altPath);
+        die("Erreur de configuration: Fichier functions.php introuvable.");
+    }
 }

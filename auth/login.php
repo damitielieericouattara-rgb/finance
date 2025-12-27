@@ -1,7 +1,7 @@
 <?php
+
 require_once '../config/config.php';
 
-// Si déjà connecté, rediriger
 if (isLoggedIn()) {
     if (isAdmin()) {
         header('Location: ../admin/dashboard.php');
@@ -11,57 +11,15 @@ if (isLoggedIn()) {
     exit();
 }
 
-// Vérifier le cookie "Se souvenir de moi"
-if (!isLoggedIn() && isset($_COOKIE['remember_token'])) {
-    try {
-        $db = getDB();
-        $token = cleanInput($_COOKIE['remember_token']);
-        
-        $stmt = $db->prepare("
-            SELECT u.*, r.name as role_name 
-            FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id 
-            WHERE u.remember_token = ? AND u.remember_expires > NOW() AND u.is_active = 1
-        ");
-        $stmt->execute([$token]);
-        $user = $stmt->fetch();
-        
-        if ($user) {
-            // Connexion automatique
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['full_name'] = $user['full_name'];
-            $_SESSION['email'] = $user['email'];
-            $_SESSION['role'] = $user['role_name'];
-            $_SESSION['role_id'] = $user['role_id'];
-            $_SESSION['LAST_ACTIVITY'] = time();
-            
-            logActivity($user['id'], 'AUTO_LOGIN', 'users', $user['id'], 'Connexion automatique via remember token');
-            
-            if ($user['role_name'] === 'admin') {
-                header('Location: ../admin/dashboard.php');
-            } else {
-                header('Location: ../user/dashboard.php');
-            }
-            exit();
-        }
-    } catch (Exception $e) {
-        error_log("Erreur remember me: " . $e->getMessage());
-    }
-}
-
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = cleanInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $selectedRole = cleanInput($_POST['role'] ?? '');
-    $rememberMe = isset($_POST['remember']) && $_POST['remember'] === 'on';
     
-    if (empty($email) || empty($password)) {
+    if (empty($email) || empty($password) || empty($selectedRole)) {
         $error = 'Veuillez remplir tous les champs';
-    } elseif (empty($selectedRole)) {
-        $error = 'Veuillez sélectionner votre rôle';
     } else {
         try {
             $db = getDB();
@@ -75,14 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Vérifier que le rôle sélectionné correspond au compte
                 if ($user['role_name'] !== $selectedRole) {
                     $error = 'Le rôle sélectionné ne correspond pas à votre compte';
-                    logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative avec mauvais rôle pour: $email");
-                } elseif ($user['email_verified'] == 0) {
-                    $error = 'Veuillez vérifier votre adresse email avant de vous connecter';
                 } else {
-                    // Connexion réussie
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['full_name'] = $user['full_name'];
@@ -91,39 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['role_id'] = $user['role_id'];
                     $_SESSION['LAST_ACTIVITY'] = time();
                     
-                    // Gérer "Se souvenir de moi"
-                    if ($rememberMe) {
-                        $rememberToken = bin2hex(random_bytes(32));
-                        $rememberExpires = date('Y-m-d H:i:s', time() + REMEMBER_ME_EXPIRY);
-                        
-                        // Sauvegarder dans la base
-                        $updateStmt = $db->prepare("
-                            UPDATE users 
-                            SET remember_token = ?, remember_expires = ? 
-                            WHERE id = ?
-                        ");
-                        $updateStmt->execute([$rememberToken, $rememberExpires, $user['id']]);
-                        
-                        // Créer le cookie sécurisé
-                        setcookie(
-                            'remember_token',
-                            $rememberToken,
-                            time() + REMEMBER_ME_EXPIRY,
-                            '/',
-                            '',
-                            isset($_SERVER['HTTPS']),
-                            true // HttpOnly
-                        );
-                    }
-                    
-                    // Mettre à jour la dernière connexion
                     $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
                     $updateStmt->execute([$user['id']]);
                     
-                    // Logger l'activité
-                    logActivity($user['id'], 'LOGIN', 'users', $user['id'], 'Connexion réussie en tant que ' . $user['role_name']);
+                    logActivity($user['id'], 'LOGIN', 'users', $user['id'], 'Connexion réussie');
                     
-                    // Rediriger selon le rôle
                     if ($user['role_name'] === 'admin') {
                         header('Location: ../admin/dashboard.php');
                     } else {
@@ -133,11 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 $error = 'Email ou mot de passe incorrect';
-                logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative échouée pour: $email");
             }
         } catch (Exception $e) {
             error_log("Erreur login: " . $e->getMessage());
-            $error = 'Une erreur est survenue. Veuillez réessayer.';
+            $error = 'Une erreur est survenue';
         }
     }
 }
@@ -264,6 +188,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
         </div>
     </div>
-    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

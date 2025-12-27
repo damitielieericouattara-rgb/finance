@@ -177,3 +177,42 @@ Stack trace:
 #0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
 #1 {main}
   thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 03:22:54 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:26
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 26
+[27-Dec-2025 03:23:37 Africa/Abidjan] Erreur createNotification: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`financial_management`.`notifications`, CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)
+[27-Dec-2025 03:24:48 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 03:25:24 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 03:27:07 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 03:32:08 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:26
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 26
+[27-Dec-2025 03:32:14 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:26
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 26
+[27-Dec-2025 03:34:27 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:26
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 26
+[27-Dec-2025 03:40:03 Africa/Abidjan] PHP Fatal error:  Cannot redeclare getStatusBadge() (previously declared in C:\xampp\htdocs\finance\config\config.php:252) in C:\xampp\htdocs\finance\includes\functions.php on line 14
+[27-Dec-2025 03:42:07 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 03:42:13 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116

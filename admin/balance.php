@@ -6,58 +6,28 @@ requireAdmin();
 $message = '';
 $messageType = '';
 
-// 🔴 CORRECTION MAJEURE : AJOUT au solde, pas réinitialisation
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_balance'])) {
-    $amountToAdd = floatval($_POST['amount_to_add']);
+// Traiter la mise à jour du solde
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_balance'])) {
+    $newBalance = floatval($_POST['new_balance']);
     $notes = cleanInput($_POST['notes']);
     
-    // Validation
-    if ($amountToAdd <= 0) {
-        $message = "Le montant à ajouter doit être supérieur à zéro";
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("CALL set_manual_balance(?, ?, ?)");
+        $stmt->execute([$_SESSION['user_id'], $newBalance, $notes]);
+        
+        $message = "Solde mis à jour avec succès à " . formatAmount($newBalance);
+        $messageType = 'success';
+    } catch (Exception $e) {
+        $message = "Erreur lors de la mise à jour: " . $e->getMessage();
         $messageType = 'error';
-    } else {
-        try {
-            $db = getDB();
-            
-            // Appeler la procédure d'AJOUT (pas set_manual_balance)
-            $stmt = $db->prepare("CALL add_to_balance(?, ?, ?)");
-            $stmt->execute([$_SESSION['user_id'], $amountToAdd, $notes]);
-            
-            $message = "✅ " . formatAmount($amountToAdd) . " ajouté avec succès au solde global";
-            $messageType = 'success';
-            
-            // Créer notification pour tous les admins
-            $adminStmt = $db->prepare("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
-            $adminStmt->execute();
-            $admins = $adminStmt->fetchAll();
-            
-            foreach ($admins as $admin) {
-                if ($admin['id'] != $_SESSION['user_id']) {
-                    createNotification(
-                        $admin['id'],
-                        'Solde global mis à jour',
-                        $_SESSION['full_name'] . " a ajouté " . formatAmount($amountToAdd) . " au solde global. Raison: " . $notes,
-                        'info',
-                        null
-                    );
-                }
-            }
-            
-        } catch (Exception $e) {
-            $message = "Erreur lors de l'ajout: " . $e->getMessage();
-            $messageType = 'error';
-            error_log("Erreur add_balance: " . $e->getMessage());
-        }
+        error_log("Erreur balance: " . $e->getMessage());
     }
 }
 
-// Récupérer le solde actuel
 $currentBalance = getCurrentBalance();
 
-// 🚨 VÉRIFIER SI LE SOLDE EST À ZÉRO
-$isBalanceZero = ($currentBalance <= 0);
-
-// Historique des modifications
+// Historique des modifications - CORRECTION COMPLÈTE
 $db = getDB();
 $history = [];
 try {
@@ -75,11 +45,15 @@ try {
         FROM balance_history bh
         LEFT JOIN users u ON bh.admin_id = u.id
         ORDER BY bh.created_at DESC
-        LIMIT 50
+        LIMIT 20
     ");
     $history = $historyStmt->fetchAll();
 } catch (Exception $e) {
     error_log("Erreur historique balance: " . $e->getMessage());
+    if (empty($message)) {
+        $message = "Note: L'historique n'est pas disponible pour le moment";
+        $messageType = 'warning';
+    }
 }
 
 $unreadCount = countUnreadNotifications($_SESSION['user_id']);
@@ -92,15 +66,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <title>Gérer le solde - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
-    <style>
-        @keyframes pulse-red {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .pulse-red {
-            animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-    </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <!-- Navigation -->
@@ -158,92 +123,50 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             </div>
         <?php endif; ?>
 
-        <?php if ($isBalanceZero): ?>
-        <!-- 🚨 ALERTE SOLDE À 0 FCFA -->
-        <div class="mb-8 bg-red-500 text-white p-8 rounded-xl shadow-2xl pulse-red">
-            <div class="flex items-center mb-4">
-                <svg class="h-16 w-16 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                <div>
-                    <h2 class="text-3xl font-bold">⚠️ ATTENTION : SOLDE À 0 FCFA</h2>
-                    <p class="text-xl mt-2">Le solde global est actuellement vide. Veuillez ajouter des fonds pour pouvoir valider les transactions.</p>
-                </div>
-            </div>
-            <div class="bg-white bg-opacity-20 p-4 rounded-lg">
-                <p class="font-semibold">📌 Actions bloquées jusqu'à ajout de fonds :</p>
-                <ul class="list-disc list-inside mt-2">
-                    <li>Validation de transactions de sortie</li>
-                    <li>Approbation de demandes de retrait</li>
-                    <li>Distribution de fonds aux utilisateurs</li>
-                </ul>
-            </div>
-        </div>
-        <?php endif; ?>
-
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <!-- Solde actuel -->
             <div class="bg-gradient-to-br from-green-500 to-green-600 p-8 rounded-xl shadow-xl text-white">
                 <h2 class="text-2xl font-bold mb-4">Solde actuel</h2>
-                <p class="text-6xl font-bold mb-2 <?php echo $isBalanceZero ? 'text-red-200' : ''; ?>">
-                    <?php echo formatAmount($currentBalance); ?>
-                </p>
+                <p class="text-6xl font-bold mb-2"><?php echo formatAmount($currentBalance); ?></p>
                 <p class="text-green-100">Dernière mise à jour: <?php echo date('d/m/Y H:i'); ?></p>
-                
-                <?php if ($isBalanceZero): ?>
-                <div class="mt-6 bg-red-600 bg-opacity-50 p-4 rounded-lg">
-                    <p class="font-bold">⚠️ Solde vide - Veuillez ajouter des fonds immédiatement</p>
-                </div>
-                <?php endif; ?>
             </div>
 
-            <!-- Formulaire d'AJOUT (pas de remplacement) -->
+            <!-- Formulaire de mise à jour -->
             <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-xl">
-                <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                    ➕ Ajouter des fonds
-                </h2>
-                <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
-                    <p class="text-sm text-blue-700 dark:text-blue-300">
-                        <strong>ℹ️ Important :</strong> Le montant entré sera <strong>AJOUTÉ</strong> au solde existant, pas remplacé.
-                    </p>
-                </div>
-                
+                <h2 class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Mettre à jour le solde</h2>
                 <form method="POST">
                     <div class="space-y-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Montant à AJOUTER (FCFA) *
+                                Nouveau solde (FCFA)
                             </label>
-                            <input type="number" name="amount_to_add" required step="0.01" min="0.01"
+                            <input type="number" name="new_balance" required step="0.01"
                                    class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                                   placeholder="Exemple: 500000">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Nouveau solde = <?php echo formatAmount($currentBalance); ?> + votre montant
-                            </p>
+                                   placeholder="<?php echo $currentBalance; ?>">
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Raison de l'ajout / Notes *
+                                Notes / Raison de la modification
                             </label>
                             <textarea name="notes" required rows="3"
                                       class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                                      placeholder="Exemple: Dépôt espèces du 27/12/2025, Virement bancaire, Fonds de démarrage..."></textarea>
+                                      placeholder="Exemple: Ajustement après inventaire physique..."></textarea>
                         </div>
 
-                        <button type="submit" name="add_balance"
+                        <button type="submit" name="update_balance"
                                 class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
-                            ➕ Ajouter les fonds au solde
+                            💾 Enregistrer le nouveau solde
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Historique des modifications -->
+        <!-- Historique -->
         <div class="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden">
             <div class="p-6 border-b dark:border-gray-700">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white">📋 Historique complet des modifications</h3>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Historique des modifications</h3>
             </div>
             
             <?php if (!empty($history)): ?>
@@ -251,13 +174,12 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 <table class="min-w-full">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date/Heure</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ancien solde</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nouveau solde</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Changement</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type d'opération</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Responsable</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Notes</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Administrateur</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -275,22 +197,11 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                                 <td class="px-6 py-4 text-sm font-bold <?php echo $h['change_amount'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'; ?>">
                                     <?php echo ($h['change_amount'] > 0 ? '+' : '') . formatAmount($h['change_amount']); ?>
                                 </td>
-                                <td class="px-6 py-4 text-sm">
-                                    <?php
-                                    $typeLabels = [
-                                        'manual_add' => '➕ Ajout manuel',
-                                        'manual_set' => '🔧 Définition manuelle',
-                                        'transaction_validation' => '✅ Validation transaction',
-                                        'transaction_rejection' => '❌ Refus transaction'
-                                    ];
-                                    echo $typeLabels[$h['change_type']] ?? $h['change_type'];
-                                    ?>
+                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                                    <?php echo $h['change_type'] === 'manual_set' ? 'Manuel' : 'Transaction'; ?>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
                                     <?php echo htmlspecialchars($h['admin_name'] ?? 'Système'); ?>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                                    <?php echo htmlspecialchars(substr($h['notes'] ?? '-', 0, 50)); ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
