@@ -36,8 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if (createUser($username, $email, $password, $fullName, $roleId)) {
-                    $message = 'Utilisateur créé avec succès';
-                    $messageType = 'success';
+                    setFlashMessage('success', 'Utilisateur créé avec succès');
                 } else {
                     throw new Exception("Erreur lors de la création (l'email ou le nom d'utilisateur existe peut-être déjà)");
                 }
@@ -55,8 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if (updateUser($id, $username, $email, $fullName, $roleId, $isActive)) {
-                    $message = 'Utilisateur mis à jour avec succès';
-                    $messageType = 'success';
+                    setFlashMessage('success', 'Utilisateur mis à jour avec succès');
                 } else {
                     throw new Exception("Erreur lors de la mise à jour");
                 }
@@ -73,16 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 if (deleteUser($id)) {
-                    $message = 'Utilisateur supprimé avec succès';
-                    $messageType = 'success';
+                    setFlashMessage('success', 'Utilisateur supprimé avec succès');
                 } else {
                     throw new Exception("Erreur lors de la suppression");
                 }
             }
         }
     } catch (Exception $e) {
-        $message = $e->getMessage();
-        $messageType = 'error';
+        setFlashMessage('error', $e->getMessage());
         error_log("Erreur gestion utilisateurs: " . $e->getMessage());
     }
     

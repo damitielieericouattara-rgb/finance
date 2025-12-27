@@ -60,7 +60,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
-    <!-- Navigation FIXE -->
+    <!-- Navigation -->
     <nav class="bg-white shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -76,7 +76,8 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <a href="dashboard.php" class="text-gray-700 hover:text-green-600">Dashboard</a>
                     <a href="transactions.php" class="text-green-600 font-medium">Transactions</a>
                     <a href="users.php" class="text-gray-700 hover:text-green-600">Utilisateurs</a>
-                    <a href="reports.php" class="text-gray-700 hover:text-green-600">Exports</a>
+                    <a href="reports.php" class="text-gray-700 hover:text-green-600">Rapports</a>
+                    <a href="balance.php" class="text-gray-700 hover:text-green-600">Solde</a>
                     
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
@@ -181,6 +182,13 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
+                        <?php if (empty($transactions)): ?>
+                        <tr>
+                            <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                                Aucune transaction trouvée
+                            </td>
+                        </tr>
+                        <?php else: ?>
                         <?php foreach ($transactions as $trans): ?>
                             <tr class="hover:bg-gray-50 <?php echo $trans['urgency'] === 'urgent' && $trans['status'] === 'en_attente' ? 'bg-red-50' : ''; ?>">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -216,16 +224,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <?php 
-                                    $colors = [
-                                        'en_attente' => 'bg-yellow-100 text-yellow-800',
-                                        'validee' => 'bg-green-100 text-green-800',
-                                        'refusee' => 'bg-red-100 text-red-800'
-                                    ];
-                                    ?>
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $colors[$trans['status']]; ?>">
-                                        <?php echo getStatusLabel($trans['status']); ?>
-                                    </span>
+                                    <?php echo getStatusBadge($trans['status']); ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <?php if ($trans['status'] === 'en_attente'): ?>
@@ -244,6 +243,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

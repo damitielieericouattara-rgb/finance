@@ -1,6 +1,6 @@
 <?php
 /**
- * CONFIGURATION PRINCIPALE - VERSION CORRIGÉE
+ * CONFIGURATION PRINCIPALE - VERSION CORRIGÉE FINALE
  */
 
 // Empêcher l'accès direct
@@ -32,10 +32,10 @@ define('UPLOAD_DIR', APP_ROOT . '/uploads');
 define('EXPORT_DIR', APP_ROOT . '/exports');
 define('EXPORT_PATH', APP_ROOT . '/exports');
 define('PDF_DIR', APP_ROOT . '/pdf');
-define('MAX_UPLOAD_SIZE', 5242880); // 5MB
+define('MAX_UPLOAD_SIZE', 5242880);
 
 // Configuration des sessions
-define('SESSION_LIFETIME', 1800); // 30 minutes
+define('SESSION_LIFETIME', 1800);
 define('SESSION_TIMEOUT', 1800);
 define('SESSION_NAME', 'FINANCIAL_APP_SESSION');
 
@@ -59,7 +59,7 @@ define('OTP_EXPIRY', 600);
 
 // Configuration réinitialisation mot de passe
 define('RESET_TOKEN_EXPIRY', 3600);
-define('REMEMBER_ME_EXPIRY', 2592000); // 30 jours
+define('REMEMBER_ME_EXPIRY', 2592000);
 
 // Configuration notifications
 define('NOTIFICATION_POLL_INTERVAL', 30000);
@@ -248,17 +248,17 @@ function logError($message, $context = []) {
 }
 
 /**
- * Logger les activités - CORRIGÉ
+ * Logger les activités
  */
 function logActivity($userId, $action, $tableName = null, $recordId = null, $details = null) {
     try {
-        $pdo = getDB();
-        $stmt = $pdo->prepare("
+        $db = getDB();
+        $stmt = $db->prepare("
             INSERT INTO activity_logs (user_id, action, table_name, record_id, details, ip_address, user_agent)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            $userId, // Maintenant c'est bien un INT
+            $userId,
             $action,
             $tableName,
             $recordId,
@@ -318,10 +318,6 @@ function requireAdmin() {
 }
 
 /**
- * FONCTIONS MÉTIER ESSENTIELLES
- */
-
-/**
  * Formater un montant
  */
 function formatAmount($amount) {
@@ -379,37 +375,6 @@ function getCurrentBalance() {
 }
 
 /**
- * Vérifier si le solde est à zéro
- */
-function isBalanceZero() {
-    return getCurrentBalance() <= 0;
-}
-
-/**
- * Obtenir le badge HTML d'un statut
- */
-function getStatusBadge($status) {
-    $badges = [
-        'en_attente' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">⏳ En attente</span>',
-        'validee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">✅ Validée</span>',
-        'rejetee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">❌ Rejetée</span>',
-    ];
-    
-    return $badges[$status] ?? '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">' . htmlspecialchars($status) . '</span>';
-}
-
-/**
- * Obtenir le label d'un type de transaction
- */
-function getTypeLabel($type) {
-    $labels = [
-        'entree' => 'Entrée',
-        'sortie' => 'Sortie'
-    ];
-    return $labels[$type] ?? $type;
-}
-
-/**
  * Créer une notification
  */
 function createNotification($userId, $title, $message, $type = 'info', $transactionId = null) {
@@ -443,6 +408,30 @@ function countUnreadNotifications($userId) {
         error_log("Erreur countUnreadNotifications: " . $e->getMessage());
         return 0;
     }
+}
+
+/**
+ * Obtenir le badge HTML d'un statut
+ */
+function getStatusBadge($status) {
+    $badges = [
+        'en_attente' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">⏳ En attente</span>',
+        'validee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">✅ Validée</span>',
+        'refusee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">❌ Refusée</span>',
+    ];
+    
+    return $badges[$status] ?? '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">' . htmlspecialchars($status) . '</span>';
+}
+
+/**
+ * Obtenir le label d'un type de transaction
+ */
+function getTypeLabel($type) {
+    $labels = [
+        'entree' => 'Entrée',
+        'sortie' => 'Sortie'
+    ];
+    return $labels[$type] ?? $type;
 }
 
 // Charger les fonctions métier supplémentaires

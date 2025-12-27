@@ -102,3 +102,78 @@ Stack trace:
 #1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
 #2 {main}
   thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:10:24 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:10:33 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:10:41 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:10:54 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:11:09 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:40:11 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(23): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:41:38 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(23): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:41:44 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(23): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:41:45 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(23): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:43:43 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:43:49 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:44:00 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:44:20 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50
+[27-Dec-2025 02:49:28 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Cannot use object of type PDO as array in C:\xampp\htdocs\finance\includes\functions.php:50
+Stack trace:
+#0 C:\xampp\htdocs\finance\user\dashboard.php(28): getTransactions(Object(PDO), Array)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 50

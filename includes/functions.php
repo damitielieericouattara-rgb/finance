@@ -1,21 +1,43 @@
 <?php
 /**
- * FONCTIONS MÉTIER - VERSION CORRIGÉE
- * Ne redéclare PAS les fonctions de config.php
+ * FONCTIONS MÉTIER - VERSION CORRIGÉE COMPLÈTE
+ * NE redéclare PAS les fonctions de config.php
  */
+
+// ========================================
+// FONCTIONS DE GESTION DES MESSAGES FLASH
+// ========================================
+
+if (!function_exists('setFlashMessage')) {
+    function setFlashMessage($type, $message) {
+        $_SESSION['flash_message'] = [
+            'type' => $type,
+            'message' => $message
+        ];
+    }
+}
+
+if (!function_exists('getFlashMessage')) {
+    function getFlashMessage() {
+        if (isset($_SESSION['flash_message'])) {
+            $flash = $_SESSION['flash_message'];
+            unset($_SESSION['flash_message']);
+            return $flash;
+        }
+        return null;
+    }
+}
 
 // ========================================
 // FONCTIONS DE TRANSACTIONS
 // ========================================
 
-/**
- * Obtenir les transactions avec filtres
- */
 if (!function_exists('getTransactions')) {
-    function getTransactions($pdo, $filters = []) {
+    function getTransactions($filters = [], $page = 1, $perPage = 20) {
         try {
+            $db = getDB();
             $sql = "SELECT t.*, 
-                           u.full_name as user_full_name, 
+                           u.full_name as user_name, 
                            u.email as user_email,
                            v.full_name as validator_name
                     FROM transactions t
@@ -45,21 +67,24 @@ if (!function_exists('getTransactions')) {
                 $params[] = $filters['urgency'];
             }
             
-            if (!empty($filters['search'])) {
-                $sql .= " AND (t.description LIKE ? OR u.full_name LIKE ?)";
-                $searchTerm = '%' . $filters['search'] . '%';
-                $params[] = $searchTerm;
-                $params[] = $searchTerm;
+            if (!empty($filters['date_from'])) {
+                $sql .= " AND DATE(t.created_at) >= ?";
+                $params[] = $filters['date_from'];
             }
             
-            $order = $filters['order'] ?? 'created_at DESC';
-            $sql .= " ORDER BY " . $order;
-            
-            if (!empty($filters['limit'])) {
-                $sql .= " LIMIT " . intval($filters['limit']);
+            if (!empty($filters['date_to'])) {
+                $sql .= " AND DATE(t.created_at) <= ?";
+                $params[] = $filters['date_to'];
             }
             
-            $stmt = $pdo->prepare($sql);
+            $sql .= " ORDER BY t.created_at DESC";
+            
+            if ($perPage > 0) {
+                $offset = ($page - 1) * $perPage;
+                $sql .= " LIMIT $perPage OFFSET $offset";
+            }
+            
+            $stmt = $db->prepare($sql);
             $stmt->execute($params);
             
             return $stmt->fetchAll();
@@ -70,9 +95,6 @@ if (!function_exists('getTransactions')) {
     }
 }
 
-/**
- * Obtenir une transaction par ID
- */
 if (!function_exists('getTransactionById')) {
     function getTransactionById($id) {
         try {
@@ -96,84 +118,81 @@ if (!function_exists('getTransactionById')) {
     }
 }
 
-/**
- * Créer une transaction
- */
 if (!function_exists('createTransaction')) {
-    function createTransaction($pdo, $data) {
+    function createTransaction($userId, $type, $amount, $description, $requiredDate, $urgency = 'normal') {
         try {
-            $stmt = $pdo->prepare("
+            $db = getDB();
+            $stmt = $db->prepare("
                 INSERT INTO transactions (user_id, type, amount, description, required_date, urgency)
                 VALUES (?, ?, ?, ?, ?, ?)
             ");
             
             $success = $stmt->execute([
-                $data['user_id'],
-                $data['type'],
-                $data['amount'],
-                $data['reason'], // Correspond au champ 'reason' du formulaire
-                $data['request_date'],
-                $data['urgency'] ?? 'normal'
+                $userId,
+                $type,
+                $amount,
+                $description,
+                $requiredDate,
+                $urgency
             ]);
             
             if ($success) {
-                $transactionId = $pdo->lastInsertId();
+                $transactionId = $db->lastInsertId();
                 
                 // Notifier les admins
-                $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
+                $adminStmt = $db->prepare("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
                 $adminStmt->execute();
                 $admins = $adminStmt->fetchAll();
                 
-                $type = $data['urgency'] === 'urgent' ? 'urgent' : 'info';
-                $title = $data['urgency'] === 'urgent' ? '🔴 Nouvelle demande URGENTE' : 'Nouvelle demande';
+                $notifType = $urgency === 'urgent' ? 'urgent' : 'info';
+                $title = $urgency === 'urgent' ? '🔴 Nouvelle demande URGENTE' : 'Nouvelle demande';
                 
                 foreach ($admins as $admin) {
                     createNotification(
                         $admin['id'],
                         $title,
-                        "Nouvelle demande de transaction nécessite validation.",
-                        $type,
+                        "Nouvelle demande de " . formatAmount($amount) . " nécessite validation.",
+                        $notifType,
                         $transactionId
                     );
                 }
                 
-                return ['success' => true, 'transaction_id' => $transactionId];
+                return $transactionId;
             }
             
-            return ['success' => false, 'message' => 'Erreur lors de la création'];
+            return false;
         } catch (Exception $e) {
             error_log("Erreur createTransaction: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+            return false;
         }
     }
 }
 
-/**
- * Valider une transaction
- */
 if (!function_exists('validateTransaction')) {
-    function validateTransaction($pdo, $transactionId, $adminId, $notes = null) {
+    function validateTransaction($transactionId, $adminId, $comment = null) {
         try {
+            $db = getDB();
+            
             $transaction = getTransactionById($transactionId);
             if (!$transaction) {
-                return ['success' => false, 'message' => 'Transaction introuvable'];
+                return false;
             }
             
             if ($transaction['status'] !== 'en_attente') {
-                return ['success' => false, 'message' => 'Transaction déjà traitée'];
+                return false;
             }
             
             // Vérifier le solde pour les sorties
             if ($transaction['type'] === 'sortie') {
                 $balance = getCurrentBalance();
                 if ($balance < $transaction['amount']) {
-                    return ['success' => false, 'message' => 'Solde insuffisant'];
+                    return false;
                 }
             }
             
             $receiptNumber = generateReceiptNumber();
             
-            $stmt = $pdo->prepare("
+            $stmt = $db->prepare("
                 UPDATE transactions 
                 SET status = 'validee', 
                     validated_by = ?,
@@ -183,7 +202,7 @@ if (!function_exists('validateTransaction')) {
                 WHERE id = ?
             ");
             
-            $success = $stmt->execute([$adminId, $notes, $receiptNumber, $transactionId]);
+            $success = $stmt->execute([$adminId, $comment, $receiptNumber, $transactionId]);
             
             if ($success) {
                 // Notifier l'utilisateur
@@ -195,239 +214,58 @@ if (!function_exists('validateTransaction')) {
                     $transactionId
                 );
                 
-                return ['success' => true, 'message' => 'Transaction validée'];
+                return true;
             }
             
-            return ['success' => false, 'message' => 'Erreur lors de la validation'];
+            return false;
         } catch (Exception $e) {
             error_log("Erreur validateTransaction: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+            return false;
         }
     }
 }
 
-/**
- * Rejeter une transaction
- */
 if (!function_exists('rejectTransaction')) {
-    function rejectTransaction($pdo, $transactionId, $adminId, $notes) {
+    function rejectTransaction($transactionId, $adminId, $comment) {
         try {
+            $db = getDB();
+            
             $transaction = getTransactionById($transactionId);
             if (!$transaction) {
-                return ['success' => false, 'message' => 'Transaction introuvable'];
+                return false;
             }
             
-            $stmt = $pdo->prepare("
+            $stmt = $db->prepare("
                 UPDATE transactions 
-                SET status = 'rejetee', 
+                SET status = 'refusee', 
                     validated_by = ?,
                     validated_at = NOW(),
                     admin_comment = ?
                 WHERE id = ?
             ");
             
-            $success = $stmt->execute([$adminId, $notes, $transactionId]);
+            $success = $stmt->execute([$adminId, $comment, $transactionId]);
             
             if ($success) {
                 createNotification(
                     $transaction['user_id'],
                     'Transaction refusée',
-                    "Votre transaction a été refusée. Motif: " . $notes,
+                    "Votre transaction a été refusée. Motif: " . $comment,
                     'warning',
                     $transactionId
                 );
                 
-                return ['success' => true, 'message' => 'Transaction rejetée'];
+                return true;
             }
             
-            return ['success' => false, 'message' => 'Erreur lors du rejet'];
+            return false;
         } catch (Exception $e) {
             error_log("Erreur rejectTransaction: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
+            return false;
         }
     }
 }
 
-/**
- * Compter les transactions en attente
- */
-if (!function_exists('countPendingTransactions')) {
-    function countPendingTransactions() {
-        try {
-            $db = getDB();
-            $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
-            $result = $stmt->fetch();
-            return $result ? intval($result['count']) : 0;
-        } catch (Exception $e) {
-            error_log("Erreur countPendingTransactions: " . $e->getMessage());
-            return 0;
-        }
-    }
-}
-
-// ========================================
-// FONCTIONS STATISTIQUES
-// ========================================
-
-/**
- * Obtenir les statistiques du tableau de bord
- */
-if (!function_exists('getDashboardStats')) {
-    function getDashboardStats($pdo) {
-        try {
-            $stats = [
-                'current_balance' => getCurrentBalance(),
-                'pending_count' => 0,
-                'validated_today' => 0,
-                'validated_today_amount' => 0,
-                'active_users' => 0
-            ];
-            
-            // Transactions en attente
-            $stmt = $pdo->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
-            $result = $stmt->fetch();
-            $stats['pending_count'] = $result['count'] ?? 0;
-            
-            // Validées aujourd'hui
-            $stmt = $pdo->query("
-                SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total 
-                FROM transactions 
-                WHERE status = 'validee' AND DATE(validated_at) = CURDATE()
-            ");
-            $result = $stmt->fetch();
-            $stats['validated_today'] = $result['count'] ?? 0;
-            $stats['validated_today_amount'] = $result['total'] ?? 0;
-            
-            // Utilisateurs actifs
-            $stmt = $pdo->query("SELECT COUNT(*) as count FROM users WHERE is_active = 1");
-            $result = $stmt->fetch();
-            $stats['active_users'] = $result['count'] ?? 0;
-            
-            return $stats;
-        } catch (Exception $e) {
-            error_log("Erreur getDashboardStats: " . $e->getMessage());
-            return [
-                'current_balance' => 0,
-                'pending_count' => 0,
-                'validated_today' => 0,
-                'validated_today_amount' => 0,
-                'active_users' => 0
-            ];
-        }
-    }
-}
-
-// ========================================
-// FONCTIONS UTILISATEURS
-// ========================================
-
-/**
- * Obtenir tous les utilisateurs
- */
-if (!function_exists('getAllUsers')) {
-    function getAllUsers() {
-        try {
-            $db = getDB();
-            $stmt = $db->query("
-                SELECT u.*, 
-                       r.name as role,
-                       CASE WHEN u.role_id = 1 THEN 'admin' ELSE 'user' END as role_name 
-                FROM users u 
-                LEFT JOIN roles r ON u.role_id = r.id
-                ORDER BY u.created_at DESC
-            ");
-            return $stmt->fetchAll();
-        } catch (Exception $e) {
-            error_log("Erreur getAllUsers: " . $e->getMessage());
-            return [];
-        }
-    }
-}
-
-/**
- * Obtenir un utilisateur par ID
- */
-if (!function_exists('getUserById')) {
-    function getUserById($id) {
-        try {
-            $db = getDB();
-            $stmt = $db->prepare("
-                SELECT u.*, r.name as role
-                FROM users u
-                LEFT JOIN roles r ON u.role_id = r.id
-                WHERE u.id = ?
-            ");
-            $stmt->execute([$id]);
-            return $stmt->fetch();
-        } catch (Exception $e) {
-            error_log("Erreur getUserById: " . $e->getMessage());
-            return null;
-        }
-    }
-}
-
-/**
- * Créer un utilisateur
- */
-if (!function_exists('createUser')) {
-    function createUser($pdo, $email, $password, $fullName, $role) {
-        try {
-            // Vérifier si l'email existe déjà
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-            $stmt->execute([$email]);
-            if ($stmt->fetch()) {
-                return ['success' => false, 'message' => 'Cet email est déjà utilisé'];
-            }
-            
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $roleId = ($role === 'admin') ? 1 : 2;
-            
-            $stmt = $pdo->prepare("
-                INSERT INTO users (username, email, password, full_name, role_id, email_verified)
-                VALUES (?, ?, ?, ?, ?, 1)
-            ");
-            
-            $username = strtolower(str_replace(' ', '', $fullName));
-            
-            if ($stmt->execute([$username, $email, $hashedPassword, $fullName, $roleId])) {
-                return ['success' => true, 'message' => 'Utilisateur créé avec succès'];
-            }
-            
-            return ['success' => false, 'message' => 'Erreur lors de la création'];
-        } catch (Exception $e) {
-            error_log("Erreur createUser: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-}
-
-/**
- * Supprimer un utilisateur
- */
-if (!function_exists('deleteUser')) {
-    function deleteUser($pdo, $userId) {
-        try {
-            // Ne pas supprimer le super admin
-            if ($userId == 1) {
-                return ['success' => false, 'message' => 'Impossible de supprimer le super admin'];
-            }
-            
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
-            if ($stmt->execute([$userId])) {
-                return ['success' => true, 'message' => 'Utilisateur supprimé'];
-            }
-            
-            return ['success' => false, 'message' => 'Erreur lors de la suppression'];
-        } catch (Exception $e) {
-            error_log("Erreur deleteUser: " . $e->getMessage());
-            return ['success' => false, 'message' => $e->getMessage()];
-        }
-    }
-}
-
-/**
- * Compter les transactions d'un utilisateur
- */
 if (!function_exists('countTransactions')) {
     function countTransactions($filters = []) {
         try {
@@ -445,6 +283,11 @@ if (!function_exists('countTransactions')) {
                 $params[] = $filters['status'];
             }
             
+            if (!empty($filters['type'])) {
+                $sql .= " AND type = ?";
+                $params[] = $filters['type'];
+            }
+            
             $stmt = $db->prepare($sql);
             $stmt->execute($params);
             $result = $stmt->fetch();
@@ -454,5 +297,227 @@ if (!function_exists('countTransactions')) {
             error_log("Erreur countTransactions: " . $e->getMessage());
             return 0;
         }
+    }
+}
+
+if (!function_exists('countPendingTransactions')) {
+    function countPendingTransactions() {
+        try {
+            $db = getDB();
+            $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
+            $result = $stmt->fetch();
+            return $result ? intval($result['count']) : 0;
+        } catch (Exception $e) {
+            error_log("Erreur countPendingTransactions: " . $e->getMessage());
+            return 0;
+        }
+    }
+}
+
+// ========================================
+// FONCTIONS UTILISATEURS
+// ========================================
+
+if (!function_exists('getAllUsers')) {
+    function getAllUsers() {
+        try {
+            $db = getDB();
+            $stmt = $db->query("
+                SELECT u.*, r.name as role_name
+                FROM users u 
+                LEFT JOIN roles r ON u.role_id = r.id
+                ORDER BY u.created_at DESC
+            ");
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
+            error_log("Erreur getAllUsers: " . $e->getMessage());
+            return [];
+        }
+    }
+}
+
+if (!function_exists('getUserById')) {
+    function getUserById($id) {
+        try {
+            $db = getDB();
+            $stmt = $db->prepare("
+                SELECT u.*, r.name as role_name
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE u.id = ?
+            ");
+            $stmt->execute([$id]);
+            return $stmt->fetch();
+        } catch (Exception $e) {
+            error_log("Erreur getUserById: " . $e->getMessage());
+            return null;
+        }
+    }
+}
+
+if (!function_exists('createUser')) {
+    function createUser($username, $email, $password, $fullName, $roleId = 2) {
+        try {
+            $db = getDB();
+            
+            // Vérifier si l'email existe déjà
+            $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                return false;
+            }
+            
+            // Vérifier si le username existe déjà
+            $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                return false;
+            }
+            
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password, full_name, role_id, email_verified, is_active)
+                VALUES (?, ?, ?, ?, ?, 1, 1)
+            ");
+            
+            return $stmt->execute([$username, $email, $hashedPassword, $fullName, $roleId]);
+        } catch (Exception $e) {
+            error_log("Erreur createUser: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+if (!function_exists('updateUser')) {
+    function updateUser($id, $username, $email, $fullName, $roleId, $isActive) {
+        try {
+            $db = getDB();
+            
+            if ($id === 1) {
+                return false; // Ne pas modifier le super admin
+            }
+            
+            $stmt = $db->prepare("
+                UPDATE users 
+                SET username = ?, email = ?, full_name = ?, role_id = ?, is_active = ?
+                WHERE id = ?
+            ");
+            
+            return $stmt->execute([$username, $email, $fullName, $roleId, $isActive, $id]);
+        } catch (Exception $e) {
+            error_log("Erreur updateUser: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+if (!function_exists('deleteUser')) {
+    function deleteUser($id) {
+        try {
+            $db = getDB();
+            
+            if ($id === 1) {
+                return false; // Ne pas supprimer le super admin
+            }
+            
+            $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
+            return $stmt->execute([$id]);
+        } catch (Exception $e) {
+            error_log("Erreur deleteUser: " . $e->getMessage());
+            return false;
+        }
+    }
+}
+
+// ========================================
+// FONCTIONS STATISTIQUES
+// ========================================
+
+if (!function_exists('getDashboardStats')) {
+    function getDashboardStats() {
+        try {
+            $db = getDB();
+            
+            $stats = [
+                'current_balance' => getCurrentBalance(),
+                'pending_count' => 0,
+                'validated_count' => 0,
+                'rejected_count' => 0,
+                'total_transactions' => 0,
+                'month_income' => 0,
+                'month_expenses' => 0
+            ];
+            
+            // Transactions en attente
+            $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
+            $result = $stmt->fetch();
+            $stats['pending_count'] = $result ? intval($result['count']) : 0;
+            
+            // Validées
+            $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'validee'");
+            $result = $stmt->fetch();
+            $stats['validated_count'] = $result ? intval($result['count']) : 0;
+            
+            // Refusées
+            $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'refusee'");
+            $result = $stmt->fetch();
+            $stats['rejected_count'] = $result ? intval($result['count']) : 0;
+            
+            // Total
+            $stats['total_transactions'] = $stats['pending_count'] + $stats['validated_count'] + $stats['rejected_count'];
+            
+            // Revenus du mois
+            $stmt = $db->query("
+                SELECT COALESCE(SUM(amount), 0) as total 
+                FROM transactions 
+                WHERE type = 'entree' 
+                AND status = 'validee' 
+                AND MONTH(validated_at) = MONTH(CURRENT_DATE) 
+                AND YEAR(validated_at) = YEAR(CURRENT_DATE)
+            ");
+            $result = $stmt->fetch();
+            $stats['month_income'] = $result ? floatval($result['total']) : 0;
+            
+            // Dépenses du mois
+            $stmt = $db->query("
+                SELECT COALESCE(SUM(amount), 0) as total 
+                FROM transactions 
+                WHERE type = 'sortie' 
+                AND status = 'validee' 
+                AND MONTH(validated_at) = MONTH(CURRENT_DATE) 
+                AND YEAR(validated_at) = YEAR(CURRENT_DATE)
+            ");
+            $result = $stmt->fetch();
+            $stats['month_expenses'] = $result ? floatval($result['total']) : 0;
+            
+            return $stats;
+        } catch (Exception $e) {
+            error_log("Erreur getDashboardStats: " . $e->getMessage());
+            return [
+                'current_balance' => 0,
+                'pending_count' => 0,
+                'validated_count' => 0,
+                'rejected_count' => 0,
+                'total_transactions' => 0,
+                'month_income' => 0,
+                'month_expenses' => 0
+            ];
+        }
+    }
+}
+
+// ========================================
+// FONCTIONS DE LABELS
+// ========================================
+
+if (!function_exists('getStatusLabel')) {
+    function getStatusLabel($status) {
+        $labels = [
+            'en_attente' => 'En attente',
+            'validee' => 'Validée',
+            'refusee' => 'Refusée'
+        ];
+        return $labels[$status] ?? $status;
     }
 }
