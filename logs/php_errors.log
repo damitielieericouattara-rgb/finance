@@ -217,3 +217,4 @@ Stack trace:
 [27-Dec-2025 03:42:07 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
 [27-Dec-2025 03:42:13 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
 [27-Dec-2025 04:16:05 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 04:46:40 Africa/Abidjan] Email non envoyé (SMTP désactivé) - To: paul@gmail.com, Subject: Réinitialisation de votre mot de passe - Gestion Financière
