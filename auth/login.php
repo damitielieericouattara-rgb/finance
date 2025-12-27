@@ -1,190 +1,269 @@
 <?php
-define('APP_ROOT', __DIR__);
-define('APP_ENV', 'production');
-require_once 'includes/config.php';
+require_once '../config/config.php';
 
 // Si déjà connecté, rediriger
 if (isLoggedIn()) {
     if (isAdmin()) {
-        header('Location: admin/dashboard.php');
+        header('Location: ../admin/dashboard.php');
     } else {
-        header('Location: user/dashboard.php');
+        header('Location: ../user/dashboard.php');
     }
-    exit;
+    exit();
+}
+
+// Vérifier le cookie "Se souvenir de moi"
+if (!isLoggedIn() && isset($_COOKIE['remember_token'])) {
+    try {
+        $db = getDB();
+        $token = cleanInput($_COOKIE['remember_token']);
+        
+        $stmt = $db->prepare("
+            SELECT u.*, r.name as role_name 
+            FROM users u 
+            LEFT JOIN roles r ON u.role_id = r.id 
+            WHERE u.remember_token = ? AND u.remember_expires > NOW() AND u.is_active = 1
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch();
+        
+        if ($user) {
+            // Connexion automatique
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['email'] = $user['email'];
+            $_SESSION['role'] = $user['role_name'];
+            $_SESSION['role_id'] = $user['role_id'];
+            $_SESSION['LAST_ACTIVITY'] = time();
+            
+            logActivity($user['id'], 'AUTO_LOGIN', 'users', $user['id'], 'Connexion automatique via remember token');
+            
+            if ($user['role_name'] === 'admin') {
+                header('Location: ../admin/dashboard.php');
+            } else {
+                header('Location: ../user/dashboard.php');
+            }
+            exit();
+        }
+    } catch (Exception $e) {
+        error_log("Erreur remember me: " . $e->getMessage());
+    }
 }
 
 $error = '';
 
-// Traitement du formulaire de connexion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
+    $email = cleanInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $selectedRole = cleanInput($_POST['role'] ?? '');
+    $rememberMe = isset($_POST['remember']) && $_POST['remember'] === 'on';
     
     if (empty($email) || empty($password)) {
-        $error = 'Veuillez remplir tous les champs.';
+        $error = 'Veuillez remplir tous les champs';
+    } elseif (empty($selectedRole)) {
+        $error = 'Veuillez sélectionner votre rôle';
     } else {
         try {
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+            $db = getDB();
+            $stmt = $db->prepare("
+                SELECT u.*, r.name as role_name 
+                FROM users u 
+                LEFT JOIN roles r ON u.role_id = r.id 
+                WHERE u.email = ? AND u.is_active = 1
+            ");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Connexion réussie
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['role'] = $user['role'];
-                $_SESSION['last_activity'] = time();
-                
-                // Logger l'activité
-                logActivity($pdo, $user['id'], 'login', 'Connexion réussie');
-                
-                // Rediriger selon le rôle
-                if ($user['role'] === 'admin') {
-                    header('Location: admin/dashboard.php');
+                // Vérifier que le rôle sélectionné correspond au compte
+                if ($user['role_name'] !== $selectedRole) {
+                    $error = 'Le rôle sélectionné ne correspond pas à votre compte';
+                    logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative avec mauvais rôle pour: $email");
+                } elseif ($user['email_verified'] == 0) {
+                    $error = 'Veuillez vérifier votre adresse email avant de vous connecter';
                 } else {
-                    header('Location: user/dashboard.php');
+                    // Connexion réussie
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['full_name'] = $user['full_name'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['role'] = $user['role_name'];
+                    $_SESSION['role_id'] = $user['role_id'];
+                    $_SESSION['LAST_ACTIVITY'] = time();
+                    
+                    // Gérer "Se souvenir de moi"
+                    if ($rememberMe) {
+                        $rememberToken = bin2hex(random_bytes(32));
+                        $rememberExpires = date('Y-m-d H:i:s', time() + REMEMBER_ME_EXPIRY);
+                        
+                        // Sauvegarder dans la base
+                        $updateStmt = $db->prepare("
+                            UPDATE users 
+                            SET remember_token = ?, remember_expires = ? 
+                            WHERE id = ?
+                        ");
+                        $updateStmt->execute([$rememberToken, $rememberExpires, $user['id']]);
+                        
+                        // Créer le cookie sécurisé
+                        setcookie(
+                            'remember_token',
+                            $rememberToken,
+                            time() + REMEMBER_ME_EXPIRY,
+                            '/',
+                            '',
+                            isset($_SERVER['HTTPS']),
+                            true // HttpOnly
+                        );
+                    }
+                    
+                    // Mettre à jour la dernière connexion
+                    $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                    $updateStmt->execute([$user['id']]);
+                    
+                    // Logger l'activité
+                    logActivity($user['id'], 'LOGIN', 'users', $user['id'], 'Connexion réussie en tant que ' . $user['role_name']);
+                    
+                    // Rediriger selon le rôle
+                    if ($user['role_name'] === 'admin') {
+                        header('Location: ../admin/dashboard.php');
+                    } else {
+                        header('Location: ../user/dashboard.php');
+                    }
+                    exit();
                 }
-                exit;
             } else {
-                $error = 'Email ou mot de passe incorrect.';
-                
-                // Logger la tentative échouée
-                if ($user) {
-                    logActivity($pdo, $user['id'], 'login_failed', 'Tentative de connexion échouée');
-                }
+                $error = 'Email ou mot de passe incorrect';
+                logActivity(null, 'LOGIN_FAILED', 'users', null, "Tentative échouée pour: $email");
             }
-        } catch (PDOException $e) {
-            $error = 'Erreur de connexion. Veuillez réessayer.';
-            logError('Login error: ' . $e->getMessage());
+        } catch (Exception $e) {
+            error_log("Erreur login: " . $e->getMessage());
+            $error = 'Une erreur est survenue. Veuillez réessayer.';
         }
     }
 }
-
-$timeout = isset($_GET['timeout']) ? true : false;
 ?>
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - <?php echo APP_NAME; ?></title>
+    <title>Connexion - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        secondary: '#10B981',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center transition-colors duration-300">
-    <div class="max-w-md w-full mx-4">
-        <!-- Toggle Thème -->
-        <div class="flex justify-end mb-4">
-            <button id="themeToggle" class="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all">
-                <!-- Icône Soleil (mode clair) -->
-                <svg class="h-6 w-6 text-gray-800 dark:text-yellow-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+<body class="bg-gradient-to-br from-green-50 to-green-100 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <!-- Logo et titre -->
+        <div class="text-center mb-8">
+            <div class="flex justify-center mb-4">
+                <svg class="h-16 w-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <!-- Icône Lune (mode sombre) -->
-                <svg class="h-6 w-6 text-gray-800 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                </svg>
-            </button>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900">Connexion</h1>
+            <p class="text-gray-600 mt-2">Accédez à votre espace Gestion Financière</p>
         </div>
 
-        <!-- Card de connexion -->
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 transition-colors duration-300">
-            <!-- Logo et titre -->
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Connexion</h1>
-                <p class="text-gray-600 dark:text-gray-400"><?php echo APP_NAME; ?></p>
-            </div>
-
-            <?php if ($timeout): ?>
-            <div class="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                <p class="text-sm text-yellow-800 dark:text-yellow-200">
-                    Votre session a expiré. Veuillez vous reconnecter.
-                </p>
-            </div>
-            <?php endif; ?>
-
+        <!-- Formulaire de connexion -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
             <?php if ($error): ?>
-            <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg">
-                <p class="text-sm text-red-800 dark:text-red-200"><?php echo escape($error); ?></p>
-            </div>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-red-700"><?php echo $error; ?></p>
+                    </div>
+                </div>
             <?php endif; ?>
 
-            <!-- Formulaire -->
-            <form method="POST" action="" class="space-y-6">
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Email
-                    </label>
-                    <input type="email" 
-                           id="email" 
-                           name="email" 
-                           required 
-                           value="<?php echo escape($_POST['email'] ?? ''); ?>"
-                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
-                           placeholder="votre.email@exemple.com">
-                </div>
+            <form method="POST" action="">
+                <div class="space-y-6">
+                    <!-- Sélection du rôle -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Je me connecte en tant que *
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="admin" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'admin') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-purple-500 peer-checked:bg-purple-50 transition hover:border-purple-300">
+                                    <svg class="mx-auto h-8 w-8 text-purple-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    <span class="font-semibold">Administrateur</span>
+                                </div>
+                            </label>
+                            <label class="relative cursor-pointer">
+                                <input type="radio" name="role" value="user" required
+                                       class="peer sr-only"
+                                       <?php echo (($_POST['role'] ?? '') === 'user') ? 'checked' : ''; ?>>
+                                <div class="border-2 border-gray-300 rounded-lg p-4 text-center peer-checked:border-green-500 peer-checked:bg-green-50 transition hover:border-green-300">
+                                    <svg class="mx-auto h-8 w-8 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="font-semibold">Utilisateur</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
 
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Mot de passe
-                    </label>
-                    <input type="password" 
-                           id="password" 
-                           name="password" 
-                           required 
-                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors"
-                           placeholder="••••••••">
-                </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                            Adresse email
+                        </label>
+                        <input type="email" id="email" name="email" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="votre@email.com"
+                               value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+                    </div>
 
-                <button type="submit" 
-                        class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-                    Se connecter
-                </button>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                            Mot de passe
+                        </label>
+                        <input type="password" id="password" name="password" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                               placeholder="••••••••">
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="remember" name="remember"
+                                   class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded">
+                            <label for="remember" class="ml-2 block text-sm text-gray-700">
+                                Se souvenir de moi
+                            </label>
+                        </div>
+                        <a href="forgot-password.php" class="text-sm text-green-600 hover:text-green-700 font-medium">
+                            Mot de passe oublié ?
+                        </a>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 focus:ring-4 focus:ring-green-300 transition transform hover:scale-105">
+                        Se connecter
+                    </button>
+                </div>
             </form>
 
-            <!-- Comptes de test -->
-            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p class="text-xs text-gray-500 dark:text-gray-400 text-center mb-3">Comptes de test :</p>
-                <div class="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                    <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-2 rounded">
-                        <span class="font-medium">Admin:</span>
-                        <span class="font-mono">admin@financialapp.com / Admin@123</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-2 rounded">
-                        <span class="font-medium">User:</span>
-                        <span class="font-mono">user1@financialapp.com / User@123</span>
-                    </div>
-                </div>
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                    Pas encore de compte ?
+                    <a href="register.php" class="text-green-600 hover:text-green-700 font-semibold">
+                        Créer un compte
+                    </a>
+                </p>
             </div>
         </div>
 
-        <!-- Footer -->
         <div class="text-center mt-6">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-                Version <?php echo APP_VERSION; ?> • © <?php echo date('Y'); ?>
-            </p>
+            <a href="../index.php" class="text-sm text-gray-600 hover:text-green-600 transition">
+                ← Retour à l'accueil
+            </a>
         </div>
     </div>
-
-    <!-- Script thème -->
-    <script src="assets/js/theme.js"></script>
+    <script src="../assets/js/theme.js"></script>
 </body>
 </html>

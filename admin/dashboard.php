@@ -1,11 +1,15 @@
 <?php
+// Définir les constantes
 define('APP_ROOT', dirname(__DIR__));
 define('APP_ENV', 'production');
-require_once '../includes/config.php';
+
+// Inclure la configuration (qui contient getCurrentUser et autres fonctions)
+require_once APP_ROOT . '/config/config.php';
+require_once APP_ROOT . '/includes/functions.php';
 
 // Vérifier que l'utilisateur est connecté et est admin
 if (!isLoggedIn() || !isAdmin()) {
-    header('Location: ../login.php');
+    header('Location: ../auth/login.php');
     exit;
 }
 
@@ -18,11 +22,13 @@ $stats = getDashboardStats($pdo);
 $recentTransactions = getTransactions($pdo, ['limit' => 5, 'order' => 'created_at DESC']);
 
 // Récupérer le solde actuel
-$currentBalance = getCurrentBalance($pdo);
-$isBalanceZero = isBalanceZero($pdo);
+$currentBalance = getCurrentBalance();
+
+// Vérifier si le solde est à zéro
+$isBalanceZero = ($currentBalance <= 0);
 
 // Récupérer les notifications non lues
-$unreadCount = countUnreadNotifications($pdo, $user['id']);
+$unreadCount = countUnreadNotifications($user['id']);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -109,7 +115,7 @@ $unreadCount = countUnreadNotifications($pdo, $user['id']);
                     <!-- Menu utilisateur -->
                     <div class="flex items-center">
                         <span class="text-sm text-gray-700 dark:text-gray-300 mr-2"><?php echo escape($user['full_name']); ?></span>
-                        <a href="../logout.php" class="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+                        <a href="../auth/logout.php" class="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
                             Déconnexion
                         </a>
                     </div>

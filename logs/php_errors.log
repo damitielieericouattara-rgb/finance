@@ -1,0 +1,15 @@
+[26-Dec-2025 20:45:01 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:243
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(243): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\auth\login.php(58): logActivity(Object(PDO), 4, 'login_failed', 'Tentative de co...')
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 243
+[26-Dec-2025 21:26:40 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[26-Dec-2025 21:26:50 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[26-Dec-2025 21:27:39 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[26-Dec-2025 21:28:09 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:29:28 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:29:30 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:29:45 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:50:44 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:51:17 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116

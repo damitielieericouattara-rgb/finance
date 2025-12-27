@@ -1,72 +1,74 @@
 <?php
 /**
- * FONCTIONS MÉTIER - VERSION COMPLÈTE ET CORRIGÉE
- * Contient TOUTES les fonctions nécessaires à l'application
+ * FONCTIONS MÉTIER - VERSION COMPLÈTE
+ * Toutes les fonctions nécessaires à l'application
  */
 
 // ========================================
-// FONCTIONS DE STATUT ET BADGES
+// FONCTIONS DE SESSION ET AUTHENTIFICATION
 // ========================================
 
 /**
- * Obtenir le badge HTML d'un statut
+ * Vérifier si l'utilisateur est connecté
  */
-function getStatusBadge($status) {
-    $badges = [
-        'en_attente' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">⏳ En attente</span>',
-        'validee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">✅ Validée</span>',
-        'refusee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">❌ Refusée</span>',
-        'annulee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">🚫 Annulée</span>',
-    ];
-    
-    return $badges[$status] ?? '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">' . htmlspecialchars($status) . '</span>';
+if (!function_exists('isLoggedIn')) {
+    function isLoggedIn() {
+        return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+    }
 }
 
 /**
- * Obtenir le label textuel d'un statut
+ * Vérifier si l'utilisateur est admin
  */
-function getStatusLabel($status) {
-    $labels = [
-        'en_attente' => 'En attente',
-        'validee' => 'Validée',
-        'refusee' => 'Refusée',
-        'annulee' => 'Annulée',
-    ];
-    
-    return $labels[$status] ?? $status;
+if (!function_exists('isAdmin')) {
+    function isAdmin() {
+        return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+    }
 }
 
 /**
- * Obtenir la couleur d'un statut
+ * Obtenir l'utilisateur connecté
  */
-function getStatusColor($status) {
-    $colors = [
-        'en_attente' => 'yellow',
-        'validee' => 'green',
-        'refusee' => 'red',
-        'annulee' => 'gray',
-    ];
-    
-    return $colors[$status] ?? 'gray';
+if (!function_exists('getCurrentUser')) {
+    function getCurrentUser() {
+        if (!isLoggedIn()) {
+            return null;
+        }
+        
+        return [
+            'id' => $_SESSION['user_id'] ?? null,
+            'email' => $_SESSION['email'] ?? '',
+            'full_name' => $_SESSION['full_name'] ?? '',
+            'role' => $_SESSION['role'] ?? 'user'
+        ];
+    }
 }
 
 /**
- * Obtenir le label d'un type de transaction
+ * Obtenir la connexion PDO
  */
-function getTypeLabel($type) {
-    $labels = [
-        'entree' => 'Entrée',
-        'sortie' => 'Sortie'
-    ];
-    
-    return $labels[$type] ?? $type;
-}
-
-/**
- * Obtenir le label d'urgence
- */
-function getUrgencyLabel($urgency) {
-    return $urgency === 'urgent' ? 'Urgent' : 'Normal';
+if (!function_exists('getDB')) {
+    function getDB() {
+        global $pdo;
+        if (!isset($pdo)) {
+            try {
+                $pdo = new PDO(
+                    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET,
+                    DB_USER,
+                    DB_PASS,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false,
+                    ]
+                );
+            } catch (PDOException $e) {
+                error_log("Erreur de connexion à la base de données : " . $e->getMessage());
+                die("Erreur de connexion à la base de données.");
+            }
+        }
+        return $pdo;
+    }
 }
 
 // ========================================
@@ -111,12 +113,21 @@ function formatDateTime($datetime, $format = 'd/m/Y H:i') {
 /**
  * Nettoyer les entrées utilisateur
  */
-// function cleanInput($data) {
-//     $data = trim($data);
-//     $data = stripslashes($data);
-//     $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
-//     return $data;
-// }
+function cleanInput($data) {
+    if (is_null($data)) return '';
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+    return $data;
+}
+
+/**
+ * Échapper pour affichage HTML
+ */
+function escape($value) {
+    if (is_null($value)) return '';
+    return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+}
 
 /**
  * Générer un numéro de reçu
@@ -144,6 +155,41 @@ function getCurrentBalance() {
     }
 }
 
+/**
+ * Vérifier si le solde est à zéro
+ */
+function isBalanceZero() {
+    return getCurrentBalance() <= 0;
+}
+
+// ========================================
+// FONCTIONS DE STATUT
+// ========================================
+
+/**
+ * Obtenir le badge HTML d'un statut
+ */
+function getStatusBadge($status) {
+    $badges = [
+        'en_attente' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">⏳ En attente</span>',
+        'validee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">✅ Validée</span>',
+        'rejetee' => '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">❌ Rejetée</span>',
+    ];
+    
+    return $badges[$status] ?? '<span class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">' . htmlspecialchars($status) . '</span>';
+}
+
+/**
+ * Obtenir le label d'un type de transaction
+ */
+function getTypeLabel($type) {
+    $labels = [
+        'entree' => 'Entrée',
+        'sortie' => 'Sortie'
+    ];
+    return $labels[$type] ?? $type;
+}
+
 // ========================================
 // FONCTIONS DE NOTIFICATIONS
 // ========================================
@@ -162,25 +208,6 @@ function createNotification($userId, $title, $message, $type = 'info', $transact
     } catch (Exception $e) {
         error_log("Erreur createNotification: " . $e->getMessage());
         return false;
-    }
-}
-
-/**
- * Obtenir les notifications non lues d'un utilisateur
- */
-function getUnreadNotifications($userId) {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("
-            SELECT * FROM notifications 
-            WHERE user_id = ? AND is_read = 0 
-            ORDER BY created_at DESC
-        ");
-        $stmt->execute([$userId]);
-        return $stmt->fetchAll();
-    } catch (Exception $e) {
-        error_log("Erreur getUnreadNotifications: " . $e->getMessage());
-        return [];
     }
 }
 
@@ -204,6 +231,25 @@ function countUnreadNotifications($userId) {
 }
 
 /**
+ * Obtenir les notifications non lues
+ */
+function getUnreadNotifications($userId) {
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("
+            SELECT * FROM notifications 
+            WHERE user_id = ? AND is_read = 0 
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    } catch (Exception $e) {
+        error_log("Erreur getUnreadNotifications: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
  * Marquer une notification comme lue
  */
 function markNotificationAsRead($notificationId) {
@@ -217,125 +263,18 @@ function markNotificationAsRead($notificationId) {
     }
 }
 
-/**
- * Compter les transactions en attente (urgentes)
- */
-function countPendingTransactions() {
-    try {
-        $db = getDB();
-        $stmt = $db->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
-        $result = $stmt->fetch();
-        return $result ? intval($result['count']) : 0;
-    } catch (Exception $e) {
-        error_log("Erreur countPendingTransactions: " . $e->getMessage());
-        return 0;
-    }
-}
-
-/**
- * Notifier les admins pour transactions urgentes
- */
-function notifyAdminsPendingTransactions() {
-    try {
-        $pendingCount = countPendingTransactions();
-        
-        if ($pendingCount > 0) {
-            $db = getDB();
-            
-            // Récupérer tous les admins
-            $stmt = $db->query("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
-            $admins = $stmt->fetchAll();
-            
-            foreach ($admins as $admin) {
-                // Vérifier s'il n'y a pas déjà une notification similaire récente (moins de 1h)
-                $checkStmt = $db->prepare("
-                    SELECT id FROM notifications 
-                    WHERE user_id = ? 
-                    AND title LIKE '%transactions en attente%'
-                    AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-                ");
-                $checkStmt->execute([$admin['id']]);
-                
-                if ($checkStmt->rowCount() == 0) {
-                    createNotification(
-                        $admin['id'],
-                        "⚠️ {$pendingCount} transaction(s) en attente !",
-                        "Il y a actuellement {$pendingCount} transaction(s) qui nécessitent votre validation. Veuillez les traiter rapidement.",
-                        'warning',
-                        null
-                    );
-                }
-            }
-        }
-    } catch (Exception $e) {
-        error_log("Erreur notifyAdminsPendingTransactions: " . $e->getMessage());
-    }
-}
-
-/**
- * Vérifier et notifier pour les transactions urgentes
- */
-function checkUrgentTransactions() {
-    try {
-        $db = getDB();
-        
-        // Transactions en attente depuis plus de 2 heures
-        $stmt = $db->query("
-            SELECT t.id, t.user_id, u.full_name, t.amount, t.created_at
-            FROM transactions t
-            JOIN users u ON t.user_id = u.id
-            WHERE t.status = 'en_attente' 
-            AND t.created_at < DATE_SUB(NOW(), INTERVAL 2 HOUR)
-        ");
-        $urgentTransactions = $stmt->fetchAll();
-        
-        if (!empty($urgentTransactions)) {
-            // Récupérer tous les admins
-            $adminStmt = $db->query("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
-            $admins = $adminStmt->fetchAll();
-            
-            foreach ($urgentTransactions as $trans) {
-                foreach ($admins as $admin) {
-                    // Vérifier si notification déjà envoyée
-                    $checkStmt = $db->prepare("
-                        SELECT id FROM notifications 
-                        WHERE user_id = ? 
-                        AND transaction_id = ?
-                        AND title LIKE '%URGENT%'
-                    ");
-                    $checkStmt->execute([$admin['id'], $trans['id']]);
-                    
-                    if ($checkStmt->rowCount() == 0) {
-                        $hours = round((time() - strtotime($trans['created_at'])) / 3600, 1);
-                        createNotification(
-                            $admin['id'],
-                            "🚨 URGENT: Transaction en attente depuis {$hours}h",
-                            "La transaction #{$trans['id']} de {$trans['full_name']} ({$trans['amount']} FCFA) attend validation depuis {$hours} heures !",
-                            'urgent',
-                            $trans['id']
-                        );
-                    }
-                }
-            }
-        }
-    } catch (Exception $e) {
-        error_log("Erreur checkUrgentTransactions: " . $e->getMessage());
-    }
-}
-
 // ========================================
 // FONCTIONS DE TRANSACTIONS
 // ========================================
 
 /**
- * Obtenir les transactions avec pagination
+ * Obtenir les transactions avec filtres
  */
-function getTransactions($filters = [], $page = 1, $perPage = 20) {
+function getTransactions($pdo, $filters = []) {
     try {
-        $db = getDB();
-        $offset = ($page - 1) * $perPage;
-        
-        $sql = "SELECT t.*, u.full_name as user_name, u.email as user_email,
+        $sql = "SELECT t.*, 
+                       u.full_name as user_full_name, 
+                       u.email as user_email,
                        v.full_name as validator_name
                 FROM transactions t
                 LEFT JOIN users u ON t.user_id = u.id
@@ -359,26 +298,14 @@ function getTransactions($filters = [], $page = 1, $perPage = 20) {
             $params[] = $filters['type'];
         }
         
-        if (!empty($filters['urgency'])) {
-            $sql .= " AND t.urgency = ?";
-            $params[] = $filters['urgency'];
+        $order = $filters['order'] ?? 'created_at DESC';
+        $sql .= " ORDER BY " . $order;
+        
+        if (!empty($filters['limit'])) {
+            $sql .= " LIMIT " . intval($filters['limit']);
         }
         
-        if (!empty($filters['date_from'])) {
-            $sql .= " AND DATE(t.created_at) >= ?";
-            $params[] = $filters['date_from'];
-        }
-        
-        if (!empty($filters['date_to'])) {
-            $sql .= " AND DATE(t.created_at) <= ?";
-            $params[] = $filters['date_to'];
-        }
-        
-        $sql .= " ORDER BY t.created_at DESC LIMIT ? OFFSET ?";
-        $params[] = $perPage;
-        $params[] = $offset;
-        
-        $stmt = $db->prepare($sql);
+        $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         
         return $stmt->fetchAll();
@@ -389,49 +316,15 @@ function getTransactions($filters = [], $page = 1, $perPage = 20) {
 }
 
 /**
- * Compter le nombre total de transactions
- */
-function countTransactions($filters = []) {
-    try {
-        $db = getDB();
-        
-        $sql = "SELECT COUNT(*) as total FROM transactions WHERE 1=1";
-        $params = [];
-        
-        if (!empty($filters['user_id'])) {
-            $sql .= " AND user_id = ?";
-            $params[] = $filters['user_id'];
-        }
-        
-        if (!empty($filters['status'])) {
-            $sql .= " AND status = ?";
-            $params[] = $filters['status'];
-        }
-        
-        if (!empty($filters['type'])) {
-            $sql .= " AND type = ?";
-            $params[] = $filters['type'];
-        }
-        
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $result = $stmt->fetch();
-        
-        return $result['total'] ?? 0;
-    } catch (Exception $e) {
-        error_log("Erreur countTransactions: " . $e->getMessage());
-        return 0;
-    }
-}
-
-/**
  * Obtenir une transaction par ID
  */
 function getTransactionById($id) {
     try {
         $db = getDB();
         $stmt = $db->prepare("
-            SELECT t.*, u.full_name as user_name, u.email as user_email,
+            SELECT t.*, 
+                   u.full_name as user_name, 
+                   u.email as user_email,
                    v.full_name as validator_name
             FROM transactions t
             LEFT JOIN users u ON t.user_id = u.id
@@ -447,52 +340,80 @@ function getTransactionById($id) {
 }
 
 /**
- * Créer une nouvelle transaction
+ * Créer une transaction
  */
-function createTransaction($userId, $type, $amount, $description, $requiredDate, $urgency) {
+function createTransaction($pdo, $data) {
     try {
-        $db = getDB();
-        $stmt = $db->prepare("
-            INSERT INTO transactions (user_id, type, amount, description, required_date, urgency)
+        $stmt = $pdo->prepare("
+            INSERT INTO transactions (user_id, type, amount, reason, request_date, urgency)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
         
-        $success = $stmt->execute([$userId, $type, $amount, $description, $requiredDate, $urgency]);
+        $success = $stmt->execute([
+            $data['user_id'],
+            $data['type'],
+            $data['amount'],
+            $data['reason'],
+            $data['request_date'],
+            $data['urgency'] ?? 'normal'
+        ]);
         
         if ($success) {
-            $transactionId = $db->lastInsertId();
+            $transactionId = $pdo->lastInsertId();
             
-            // Notifier tous les admins
-            notifyAdminsNewTransaction($transactionId, $urgency);
+            // Notifier les admins
+            $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'admin' AND is_active = 1");
+            $adminStmt->execute();
+            $admins = $adminStmt->fetchAll();
             
-            return $transactionId;
+            $type = $data['urgency'] === 'urgent' ? 'urgent' : 'info';
+            $title = $data['urgency'] === 'urgent' ? '🔴 Nouvelle demande URGENTE' : 'Nouvelle demande';
+            
+            foreach ($admins as $admin) {
+                createNotification(
+                    $admin['id'],
+                    $title,
+                    "Nouvelle demande de transaction nécessite validation.",
+                    $type,
+                    $transactionId
+                );
+            }
+            
+            return ['success' => true, 'transaction_id' => $transactionId];
         }
         
-        return false;
+        return ['success' => false, 'message' => 'Erreur lors de la création'];
     } catch (Exception $e) {
         error_log("Erreur createTransaction: " . $e->getMessage());
-        return false;
+        return ['success' => false, 'message' => $e->getMessage()];
     }
 }
 
 /**
  * Valider une transaction
  */
-function validateTransaction($transactionId, $adminId, $comment = null) {
+function validateTransaction($pdo, $transactionId, $adminId, $notes = null) {
     try {
-        $db = getDB();
-        
-        // Récupérer la transaction
         $transaction = getTransactionById($transactionId);
         if (!$transaction) {
-            return false;
+            return ['success' => false, 'message' => 'Transaction introuvable'];
         }
         
-        // Générer un numéro de reçu
+        if ($transaction['status'] !== 'en_attente') {
+            return ['success' => false, 'message' => 'Transaction déjà traitée'];
+        }
+        
+        // Vérifier le solde pour les sorties
+        if ($transaction['type'] === 'sortie') {
+            $balance = getCurrentBalance();
+            if ($balance < $transaction['amount']) {
+                return ['success' => false, 'message' => 'Solde insuffisant'];
+            }
+        }
+        
         $receiptNumber = generateReceiptNumber();
         
-        // Mettre à jour la transaction
-        $stmt = $db->prepare("
+        $stmt = $pdo->prepare("
             UPDATE transactions 
             SET status = 'validee', 
                 validated_by = ?,
@@ -502,7 +423,7 @@ function validateTransaction($transactionId, $adminId, $comment = null) {
             WHERE id = ?
         ");
         
-        $success = $stmt->execute([$adminId, $comment, $receiptNumber, $transactionId]);
+        $success = $stmt->execute([$adminId, $notes, $receiptNumber, $transactionId]);
         
         if ($success) {
             // Notifier l'utilisateur
@@ -514,87 +435,103 @@ function validateTransaction($transactionId, $adminId, $comment = null) {
                 $transactionId
             );
             
-            return true;
+            return ['success' => true, 'message' => 'Transaction validée'];
         }
         
-        return false;
+        return ['success' => false, 'message' => 'Erreur lors de la validation'];
     } catch (Exception $e) {
         error_log("Erreur validateTransaction: " . $e->getMessage());
-        return false;
+        return ['success' => false, 'message' => $e->getMessage()];
     }
 }
 
 /**
- * Refuser une transaction
+ * Rejeter une transaction
  */
-function rejectTransaction($transactionId, $adminId, $comment) {
+function rejectTransaction($pdo, $transactionId, $adminId, $notes) {
     try {
-        $db = getDB();
-        
-        // Récupérer la transaction
         $transaction = getTransactionById($transactionId);
         if (!$transaction) {
-            return false;
+            return ['success' => false, 'message' => 'Transaction introuvable'];
         }
         
-        // Mettre à jour la transaction
-        $stmt = $db->prepare("
+        $stmt = $pdo->prepare("
             UPDATE transactions 
-            SET status = 'refusee', 
+            SET status = 'rejetee', 
                 validated_by = ?,
                 validated_at = NOW(),
                 admin_comment = ?
             WHERE id = ?
         ");
         
-        $success = $stmt->execute([$adminId, $comment, $transactionId]);
+        $success = $stmt->execute([$adminId, $notes, $transactionId]);
         
         if ($success) {
-            // Notifier l'utilisateur
             createNotification(
                 $transaction['user_id'],
                 'Transaction refusée',
-                "Votre transaction de " . formatAmount($transaction['amount']) . " a été refusée. Motif: " . $comment,
+                "Votre transaction a été refusée. Motif: " . $notes,
                 'warning',
                 $transactionId
             );
             
-            return true;
+            return ['success' => true, 'message' => 'Transaction rejetée'];
         }
         
-        return false;
+        return ['success' => false, 'message' => 'Erreur lors du rejet'];
     } catch (Exception $e) {
         error_log("Erreur rejectTransaction: " . $e->getMessage());
-        return false;
+        return ['success' => false, 'message' => $e->getMessage()];
     }
 }
 
+// ========================================
+// FONCTIONS STATISTIQUES
+// ========================================
+
 /**
- * Notifier tous les admins d'une nouvelle transaction
+ * Obtenir les statistiques du tableau de bord
  */
-function notifyAdminsNewTransaction($transactionId, $urgency) {
+function getDashboardStats($pdo) {
     try {
-        $db = getDB();
+        $stats = [
+            'current_balance' => getCurrentBalance(),
+            'pending_count' => 0,
+            'validated_today' => 0,
+            'validated_today_amount' => 0,
+            'active_users' => 0
+        ];
         
-        // Récupérer tous les admins
-        $stmt = $db->prepare("SELECT id FROM users WHERE role_id = 1 AND is_active = 1");
-        $stmt->execute();
-        $admins = $stmt->fetchAll();
+        // Transactions en attente
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM transactions WHERE status = 'en_attente'");
+        $result = $stmt->fetch();
+        $stats['pending_count'] = $result['count'] ?? 0;
         
-        $type = $urgency === 'urgent' ? 'urgent' : 'info';
-        $title = $urgency === 'urgent' ? '🔴 Nouvelle demande URGENTE' : 'Nouvelle demande de transaction';
+        // Validées aujourd'hui
+        $stmt = $pdo->query("
+            SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total 
+            FROM transactions 
+            WHERE status = 'validee' AND DATE(validated_at) = CURDATE()
+        ");
+        $result = $stmt->fetch();
+        $stats['validated_today'] = $result['count'] ?? 0;
+        $stats['validated_today_amount'] = $result['total'] ?? 0;
         
-        foreach ($admins as $admin) {
-            createNotification(
-                $admin['id'],
-                $title,
-                "Une nouvelle demande de transaction nécessite votre attention.",
-                $type,
-                $transactionId
-            );
-        }
+        // Utilisateurs actifs
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM users WHERE is_active = 1");
+        $result = $stmt->fetch();
+        $stats['active_users'] = $result['count'] ?? 0;
+        
+        return $stats;
     } catch (Exception $e) {
-        error_log("Erreur notifyAdminsNewTransaction: " . $e->getMessage());
+        error_log("Erreur getDashboardStats: " . $e->getMessage());
+        return [
+            'current_balance' => 0,
+            'pending_count' => 0,
+            'validated_today' => 0,
+            'validated_today_amount' => 0,
+            'active_users' => 0
+        ];
     }
 }
 
@@ -609,9 +546,9 @@ function getAllUsers() {
     try {
         $db = getDB();
         $stmt = $db->query("
-            SELECT u.*, r.name as role_name 
+            SELECT u.*, 
+                   CASE WHEN u.role = 'admin' THEN 'admin' ELSE 'user' END as role_name 
             FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id 
             ORDER BY u.created_at DESC
         ");
         return $stmt->fetchAll();
@@ -622,115 +559,70 @@ function getAllUsers() {
 }
 
 /**
- * Obtenir un utilisateur par ID
+ * Logger les activités
  */
-function getUserById($id) {
+function logActivity($userId, $action, $tableName = null, $recordId = null, $details = null) {
     try {
         $db = getDB();
         $stmt = $db->prepare("
-            SELECT u.*, r.name as role_name 
-            FROM users u 
-            LEFT JOIN roles r ON u.role_id = r.id 
-            WHERE u.id = ?
+            INSERT INTO activity_logs (user_id, action, table_name, record_id, details, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$id]);
-        return $stmt->fetch();
+        $stmt->execute([
+            $userId,
+            $action,
+            $tableName,
+            $recordId,
+            $details,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
+        ]);
     } catch (Exception $e) {
-        error_log("Erreur getUserById: " . $e->getMessage());
-        return null;
+        error_log("Erreur logActivity: " . $e->getMessage());
     }
 }
 
 /**
- * Créer un utilisateur
+ * Envoyer un email
  */
-function createUser($username, $email, $password, $fullName, $roleId) {
-    try {
-        $db = getDB();
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        
-        $stmt = $db->prepare("
-            INSERT INTO users (username, email, password, full_name, role_id, email_verified)
-            VALUES (?, ?, ?, ?, ?, 1)
-        ");
-        
-        return $stmt->execute([$username, $email, $hashedPassword, $fullName, $roleId]);
-    } catch (Exception $e) {
-        error_log("Erreur createUser: " . $e->getMessage());
+function sendEmail($to, $subject, $body, $isHtml = false) {
+    if (!defined('SMTP_ENABLED') || !SMTP_ENABLED) {
+        error_log("Email non envoyé (SMTP désactivé) - To: $to, Subject: $subject");
         return false;
     }
-}
-
-/**
- * Mettre à jour un utilisateur
- */
-function updateUser($id, $username, $email, $fullName, $roleId, $isActive) {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("
-            UPDATE users 
-            SET username = ?, email = ?, full_name = ?, role_id = ?, is_active = ?
-            WHERE id = ?
-        ");
-        
-        return $stmt->execute([$username, $email, $fullName, $roleId, $isActive, $id]);
-    } catch (Exception $e) {
-        error_log("Erreur updateUser: " . $e->getMessage());
-        return false;
+    
+    $headers = [
+        'From' => (defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'Financial App') . ' <' . (defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'noreply@financialapp.com') . '>',
+        'Reply-To' => defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'noreply@financialapp.com',
+        'X-Mailer' => 'PHP/' . phpversion(),
+    ];
+    
+    if ($isHtml) {
+        $headers['MIME-Version'] = '1.0';
+        $headers['Content-type'] = 'text/html; charset=UTF-8';
     }
-}
-
-/**
- * Supprimer un utilisateur
- */
-function deleteUser($id) {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("DELETE FROM users WHERE id = ? AND role_id != 1");
-        return $stmt->execute([$id]);
-    } catch (Exception $e) {
-        error_log("Erreur deleteUser: " . $e->getMessage());
-        return false;
+    
+    $headerStr = '';
+    foreach ($headers as $key => $value) {
+        $headerStr .= "$key: $value\r\n";
     }
+    
+    return mail($to, $subject, $body, $headerStr);
 }
 
 /**
- * Obtenir les statistiques du dashboard
+ * Générer un token CSRF
  */
-function getDashboardStats($period = 'day') {
-    try {
-        $db = getDB();
-        $stmt = $db->prepare("CALL get_dashboard_stats(?)");
-        $stmt->execute([$period]);
-        return $stmt->fetch();
-    } catch (Exception $e) {
-        error_log("Erreur getDashboardStats: " . $e->getMessage());
-        return [
-            'current_balance' => 0,
-            'pending_count' => 0,
-            'validated_count' => 0,
-            'rejected_count' => 0,
-            'total_entrees' => 0,
-            'total_sorties' => 0
-        ];
+function generateCsrfToken() {
+    if (!isset($_SESSION[CSRF_TOKEN_NAME])) {
+        $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
     }
+    return $_SESSION[CSRF_TOKEN_NAME];
 }
 
 /**
- * Messages flash
+ * Vérifier un token CSRF
  */
-// function setFlashMessage($type, $message) {
-//     $_SESSION['flash_message'] = [
-//         'type' => $type,
-//         'message' => $message
-//     ];
-// }
-
-// function getFlashMessage() {
-//     if (isset($_SESSION['flash_message'])) {
-//         $flash = $_SESSION['flash_message'];
-//         unset($_SESSION['flash_message']);
-//         return $flash;
-//     }
-//     return null;
-// }
+function verifyCsrfToken($token) {
+    return isset($_SESSION[CSRF_TOKEN_NAME]) && hash_equals($_SESSION[CSRF_TOKEN_NAME], $token);
+}

@@ -1,12 +1,15 @@
 <?php
-define('APP_ROOT', __DIR__);
+// Définir les constantes
+define('APP_ROOT', dirname(__DIR__));
 define('APP_ENV', 'production');
-require_once 'includes/config.php';
+
+// Inclure la configuration
+require_once APP_ROOT . '/config/config.php';
 
 // Logger la déconnexion si l'utilisateur est connecté
 if (isLoggedIn()) {
     $userId = $_SESSION['user_id'];
-    logActivity($pdo, $userId, 'logout', 'Déconnexion');
+    logActivity($userId, 'LOGOUT', 'users', $userId, 'Déconnexion');
 }
 
 // Détruire la session
