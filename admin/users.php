@@ -1,139 +1,139 @@
 <?php
-define('APP_ROOT', dirname(__DIR__));
-define('APP_ENV', 'production');
-require_once '../includes/config.php';
+require_once '../config/config.php';
+require_once '../includes/functions.php';
+requireAdmin();
 
-if (!isLoggedIn() || !isAdmin()) {
-    header('Location: ../login.php');
-    exit;
-}
-
-$user = getCurrentUser();
 $message = '';
 $messageType = '';
 
-// Traitement des actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    
-    if ($action === 'create') {
-        $email = trim($_POST['email'] ?? '');
-        $fullName = trim($_POST['full_name'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $role = $_POST['role'] ?? 'user';
-        
-        if (empty($email) || empty($fullName) || empty($password)) {
-            $message = 'Tous les champs sont requis.';
-            $messageType = 'error';
-        } elseif (strlen($password) < PASSWORD_MIN_LENGTH) {
-            $message = 'Le mot de passe doit contenir au moins ' . PASSWORD_MIN_LENGTH . ' caractères.';
-            $messageType = 'error';
-        } else {
-            $result = createUser($pdo, $email, $password, $fullName, $role);
-            if ($result['success']) {
-                $message = 'Utilisateur créé avec succès.';
-                $messageType = 'success';
-            } else {
-                $message = $result['message'];
-                $messageType = 'error';
-            }
-        }
-    } elseif ($action === 'toggle_status') {
-        $userId = $_POST['user_id'] ?? null;
-        if ($userId) {
-            $stmt = $pdo->prepare("UPDATE users SET is_active = NOT is_active WHERE id = ?");
-            $stmt->execute([$userId]);
-            $message = 'Statut mis à jour.';
-            $messageType = 'success';
-        }
-    } elseif ($action === 'delete') {
-        $userId = $_POST['user_id'] ?? null;
-        if ($userId && $userId != $user['id']) {
-            $result = deleteUser($pdo, $userId);
-            if ($result['success']) {
-                $message = 'Utilisateur supprimé.';
-                $messageType = 'success';
-            } else {
-                $message = $result['message'];
-                $messageType = 'error';
-            }
-        }
-    }
-}
-
-$users = getAllUsers($pdo);
-?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Utilisateurs - <?php echo APP_NAME; ?></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        secondary: '#10B981',
-                    }
+    try {
+        if (isset($_POST['action'])) {
+            $action = $_POST['action'];
+            
+            if ($action === 'create') {
+                $username = cleanInput($_POST['username']);
+                $email = cleanInput($_POST['email']);
+                $password = $_POST['password'];
+                $fullName = cleanInput($_POST['full_name']);
+                $roleId = intval($_POST['role_id']);
+                
+                // Validation
+                if (empty($username) || empty($email) || empty($password) || empty($fullName)) {
+                    throw new Exception("Tous les champs sont requis");
+                }
+                
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    throw new Exception("Email invalide");
+                }
+                
+                if (strlen($password) < PASSWORD_MIN_LENGTH) {
+                    throw new Exception("Mot de passe trop court (min. " . PASSWORD_MIN_LENGTH . " caractères)");
+                }
+                
+                if (!in_array($roleId, [1, 2])) {
+                    throw new Exception("Rôle invalide");
+                }
+                
+                if (createUser($username, $email, $password, $fullName, $roleId)) {
+                    $message = 'Utilisateur créé avec succès';
+                    $messageType = 'success';
+                } else {
+                    throw new Exception("Erreur lors de la création (l'email ou le nom d'utilisateur existe peut-être déjà)");
+                }
+                
+            } elseif ($action === 'update') {
+                $id = intval($_POST['user_id']);
+                $username = cleanInput($_POST['username']);
+                $email = cleanInput($_POST['email']);
+                $fullName = cleanInput($_POST['full_name']);
+                $roleId = intval($_POST['role_id']);
+                $isActive = intval($_POST['is_active']);
+                
+                if ($id === 1) {
+                    throw new Exception("Impossible de modifier le super administrateur");
+                }
+                
+                if (updateUser($id, $username, $email, $fullName, $roleId, $isActive)) {
+                    $message = 'Utilisateur mis à jour avec succès';
+                    $messageType = 'success';
+                } else {
+                    throw new Exception("Erreur lors de la mise à jour");
+                }
+                
+            } elseif ($action === 'delete') {
+                $id = intval($_POST['user_id']);
+                
+                if ($id === 1) {
+                    throw new Exception("Impossible de supprimer le super administrateur");
+                }
+                
+                if ($id === $_SESSION['user_id']) {
+                    throw new Exception("Vous ne pouvez pas supprimer votre propre compte");
+                }
+                
+                if (deleteUser($id)) {
+                    $message = 'Utilisateur supprimé avec succès';
+                    $messageType = 'success';
+                } else {
+                    throw new Exception("Erreur lors de la suppression");
                 }
             }
         }
+    } catch (Exception $e) {
+        $message = $e->getMessage();
+        $messageType = 'error';
+        error_log("Erreur gestion utilisateurs: " . $e->getMessage());
+    }
+    
+    header('Location: users.php');
+    exit();
+}
+
+$users = getAllUsers();
+$unreadCount = countUnreadNotifications($_SESSION['user_id']);
+$flash = getFlashMessage();
+?>
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion utilisateurs - <?php echo SITE_NAME; ?></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
     </script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-gray-900">
     <!-- Navigation -->
-    <nav class="bg-white dark:bg-gray-800 shadow-lg transition-colors duration-300">
+    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center">
-                        <svg class="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span class="ml-2 text-xl font-bold text-gray-900 dark:text-white">Admin</span>
-                    </div>
-                    <div class="hidden md:ml-6 md:flex md:space-x-4">
-                        <a href="dashboard.php" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Tableau de bord
-                        </a>
-                        <a href="transactions.php" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Transactions
-                        </a>
-                        <a href="balance.php" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Solde Global
-                        </a>
-                        <a href="users.php" class="px-3 py-2 rounded-md text-sm font-medium bg-primary text-white">
-                            Utilisateurs
-                        </a>
-                    </div>
+                    <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="ml-3 text-xl font-bold text-green-600 dark:text-green-400"><?php echo SITE_NAME; ?></span>
+                    <span class="ml-4 px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs font-semibold rounded-full">ADMIN</span>
                 </div>
+                
                 <div class="flex items-center space-x-4">
-                    <div class="relative">
-                        <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                    <a href="dashboard.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Dashboard</a>
+                    <a href="transactions.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Transactions</a>
+                    <a href="users.php" class="text-green-600 dark:text-green-400 font-medium">Utilisateurs</a>
+                    <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
+                    <a href="balance.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Solde</a>
+                    
+                    <div class="flex items-center space-x-2">
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300"><?php echo $_SESSION['full_name']; ?></p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Administrateur</p>
+                        </div>
+                        <a href="../auth/logout.php" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2" title="Déconnexion">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
-                            <span data-notification-badge class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 items-center justify-center">0</span>
-                        </a>
-                    </div>
-                    
-                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                        <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="flex items-center">
-                        <span class="text-sm text-gray-700 dark:text-gray-300 mr-2"><?php echo escape($user['full_name']); ?></span>
-                        <a href="../logout.php" class="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
-                            Déconnexion
                         </a>
                     </div>
                 </div>
@@ -141,81 +141,80 @@ $users = getAllUsers($pdo);
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <?php if ($message): ?>
-        <div class="mb-6 p-4 rounded-lg <?php echo $messageType === 'success' ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700' : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700'; ?>">
-            <p class="text-sm <?php echo $messageType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'; ?>">
-                <?php echo escape($message); ?>
-            </p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestion des utilisateurs</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Créer, modifier et gérer les comptes utilisateurs</p>
         </div>
+
+        <?php if ($flash): ?>
+            <div class="mb-6 p-4 rounded-lg <?php echo $flash['type'] === 'success' ? 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500' : 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500'; ?>">
+                <div class="flex">
+                    <svg class="h-5 w-5 <?php echo $flash['type'] === 'success' ? 'text-green-400' : 'text-red-400'; ?>" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="ml-3 text-sm <?php echo $flash['type'] === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'; ?>">
+                        <?php echo $flash['message']; ?>
+                    </p>
+                </div>
+            </div>
         <?php endif; ?>
 
-        <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Gestion des Utilisateurs</h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    <?php echo count($users); ?> utilisateur(s) au total
-                </p>
-            </div>
-            <button onclick="openCreateModal()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 shadow-lg">
-                <svg class="inline-block h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Nouvel utilisateur
-            </button>
-        </div>
+        <button onclick="openCreateModal()" class="mb-6 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition shadow-lg">
+            <svg class="inline-block w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Ajouter un utilisateur
+        </button>
 
-        <!-- Liste des utilisateurs -->
-        <div class="px-4 mt-6">
-            <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-900">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nom complet</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rôle</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Statut</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Créé le</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nom</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Rôle</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Créé le</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        <?php foreach ($users as $u): ?>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <?php foreach ($users as $user): ?>
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                <?php echo escape($u['full_name']); ?>
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-300"><?php echo $user['id']; ?></td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-gray-900 dark:text-gray-300"><?php echo htmlspecialchars($user['full_name']); ?></div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400"><?php echo htmlspecialchars($user['username']); ?></div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                <?php echo escape($u['email']); ?>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $u['role'] === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'; ?>">
-                                    <?php echo ucfirst($u['role']); ?>
+                            <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-300"><?php echo htmlspecialchars($user['email']); ?></td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $user['role_id'] == 1 ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'; ?>">
+                                    <?php echo htmlspecialchars($user['role_name']); ?>
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $u['is_active'] ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'; ?>">
-                                    <?php echo $u['is_active'] ? 'Actif' : 'Inactif'; ?>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $user['is_active'] ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'; ?>">
+                                    <?php echo $user['is_active'] ? 'Actif' : 'Inactif'; ?>
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                <?php echo formatDate($u['created_at']); ?>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                <?php echo formatDate($user['created_at']); ?>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                <?php if ($u['id'] != $user['id']): ?>
-                                <form method="POST" class="inline">
-                                    <input type="hidden" name="action" value="toggle_status">
-                                    <input type="hidden" name="user_id" value="<?php echo $u['id']; ?>">
-                                    <button type="submit" class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300">
-                                        <?php echo $u['is_active'] ? 'Désactiver' : 'Activer'; ?>
-                                    </button>
-                                </form>
-                                <button onclick="confirmDelete(<?php echo $u['id']; ?>, '<?php echo escape($u['full_name']); ?>')" 
-                                        class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
-                                    Supprimer
-                                </button>
+                            <td class="px-6 py-4 text-sm">
+                                <?php if ($user['id'] != 1): ?>
+                                    <button onclick='editUser(<?php echo json_encode($user); ?>)' class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 mr-3">Modifier</button>
+                                    <?php if ($user['id'] != $_SESSION['user_id']): ?>
+                                    <form method="POST" class="inline" onsubmit="return confirm('Supprimer cet utilisateur ?')">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                        <button type="submit" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">Supprimer</button>
+                                    </form>
+                                    <?php endif; ?>
                                 <?php else: ?>
-                                <span class="text-gray-400 dark:text-gray-600">Vous</span>
+                                    <span class="text-gray-400">Super Admin</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -224,108 +223,84 @@ $users = getAllUsers($pdo);
                 </table>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- Modal création -->
-    <div id="createModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Nouvel utilisateur</h3>
+    <div id="createModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg max-w-md w-full mx-4 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Nouvel utilisateur</h3>
             <form method="POST">
                 <input type="hidden" name="action" value="create">
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom complet</label>
-                        <input type="text" name="full_name" required 
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-                        <input type="email" name="email" required 
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mot de passe</label>
-                        <input type="password" name="password" required minlength="8"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rôle</label>
-                        <select name="role" 
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <option value="user">Utilisateur</option>
-                            <option value="admin">Administrateur</option>
-                        </select>
-                    </div>
+                    <input type="text" name="full_name" placeholder="Nom complet" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="text" name="username" placeholder="Nom d'utilisateur" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="email" name="email" placeholder="Email" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="password" name="password" placeholder="Mot de passe" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <select name="role_id" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="2">Utilisateur</option>
+                        <option value="1">Administrateur</option>
+                    </select>
                 </div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button type="button" onclick="closeCreateModal()" 
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                        Annuler
-                    </button>
-                    <button type="submit" 
-                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600">
-                        Créer
-                    </button>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeCreateModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Créer</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal suppression -->
-    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Confirmer la suppression</h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-6">
-                Êtes-vous sûr de vouloir supprimer l'utilisateur <strong id="deleteUserName"></strong> ?
-            </p>
-            <form method="POST">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="user_id" id="deleteUserId">
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeDeleteModal()" 
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                        Annuler
-                    </button>
-                    <button type="submit" 
-                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        Supprimer
-                    </button>
+    <!-- Modal édition -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg max-w-md w-full mx-4 shadow-2xl">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">Modifier l'utilisateur</h3>
+            <form method="POST" id="editForm">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="user_id" id="edit_user_id">
+                <div class="space-y-4">
+                    <input type="text" name="full_name" id="edit_full_name" placeholder="Nom complet" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="text" name="username" id="edit_username" placeholder="Nom d'utilisateur" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <input type="email" name="email" id="edit_email" placeholder="Email" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <select name="role_id" id="edit_role_id" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="2">Utilisateur</option>
+                        <option value="1">Administrateur</option>
+                    </select>
+                    <select name="is_active" id="edit_is_active" required class="w-full px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="1">Actif</option>
+                        <option value="0">Inactif</option>
+                    </select>
+                </div>
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Enregistrer</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script src="../assets/js/theme.js"></script>
-    <script src="../assets/js/notifications_system.js"></script>
     <script>
-        if (window.NotificationManager) {
-            window.NotificationManager.init(<?php echo $user['id']; ?>);
-        }
-
         function openCreateModal() {
             document.getElementById('createModal').classList.remove('hidden');
         }
-
+        
         function closeCreateModal() {
             document.getElementById('createModal').classList.add('hidden');
         }
-
-        function confirmDelete(userId, userName) {
-            document.getElementById('deleteUserId').value = userId;
-            document.getElementById('deleteUserName').textContent = userName;
-            document.getElementById('deleteModal').classList.remove('hidden');
+        
+        function editUser(user) {
+            document.getElementById('edit_user_id').value = user.id;
+            document.getElementById('edit_full_name').value = user.full_name;
+            document.getElementById('edit_username').value = user.username;
+            document.getElementById('edit_email').value = user.email;
+            document.getElementById('edit_role_id').value = user.role_id;
+            document.getElementById('edit_is_active').value = user.is_active;
+            document.getElementById('editModal').classList.remove('hidden');
         }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
+        
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
         }
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeCreateModal();
-                closeDeleteModal();
-            }
-        });
     </script>
+    
 </body>
 </html>

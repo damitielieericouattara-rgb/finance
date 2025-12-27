@@ -13,3 +13,92 @@ Stack trace:
 [27-Dec-2025 01:29:45 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
 [27-Dec-2025 01:50:44 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
 [27-Dec-2025 01:51:17 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:53:23 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 01:53:33 Africa/Abidjan] PHP Fatal error:  Cannot redeclare cleanInput() (previously declared in C:\xampp\htdocs\finance\config\config.php:208) in C:\xampp\htdocs\finance\includes\functions.php on line 116
+[27-Dec-2025 02:03:22 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:22 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:22 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:22 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:22 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:23 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:37 Africa/Abidjan] PHP Warning:  Undefined array key "reason" in C:\xampp\htdocs\finance\admin\transactions.php on line 254
+[27-Dec-2025 02:03:55 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:03:57 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:04:13 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:04:31 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:05:03 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:05:42 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:06:05 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to undefined function getFlashMessage() in C:\xampp\htdocs\finance\admin\users.php:95
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\finance\admin\users.php on line 95
+[27-Dec-2025 02:06:10 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to undefined function getFlashMessage() in C:\xampp\htdocs\finance\admin\users.php:95
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\finance\admin\users.php on line 95
+[27-Dec-2025 02:06:19 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to undefined function getFlashMessage() in C:\xampp\htdocs\finance\admin\users.php:95
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\finance\admin\users.php on line 95
+[27-Dec-2025 02:06:30 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to undefined function getFlashMessage() in C:\xampp\htdocs\finance\admin\users.php:95
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\finance\admin\users.php on line 95
+[27-Dec-2025 02:07:24 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on array in C:\xampp\htdocs\finance\includes\functions.php:62
+Stack trace:
+#0 C:\xampp\htdocs\finance\admin\transactions.php(47): getTransactions(Array, 1, 20)
+#1 {main}
+  thrown in C:\xampp\htdocs\finance\includes\functions.php on line 62
+[27-Dec-2025 02:07:52 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
+[27-Dec-2025 02:07:55 Africa/Abidjan] PHP Fatal error:  Uncaught Error: Object of class PDO could not be converted to string in C:\xampp\htdocs\finance\config\config.php:439
+Stack trace:
+#0 C:\xampp\htdocs\finance\config\config.php(439): PDOStatement->execute(Array)
+#1 C:\xampp\htdocs\finance\user\dashboard.php(51): countUnreadNotifications(Object(PDO), 9)
+#2 {main}
+  thrown in C:\xampp\htdocs\finance\config\config.php on line 439
