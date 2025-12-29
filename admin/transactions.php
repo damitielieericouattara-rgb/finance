@@ -58,6 +58,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des transactions - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../assets/css/responsive.css">
 </head>
 <body class="bg-gray-50">
     <!-- Navigation -->

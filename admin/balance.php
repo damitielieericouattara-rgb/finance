@@ -90,6 +90,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <title>Gérer le solde - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
+    <link rel="stylesheet" href="../assets/css/responsive.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <!-- Navigation -->
