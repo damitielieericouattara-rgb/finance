@@ -6,7 +6,7 @@ requireAdmin();
 $message = '';
 $messageType = '';
 
-// ✅ CORRECTION MAJEURE : Addition cumulative au lieu de réinitialisation
+// Addition cumulative au lieu de réinitialisation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_balance'])) {
     $amountToAdd = floatval($_POST['amount_to_add']);
     $notes = cleanInput($_POST['notes']);
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_balance'])) {
             // Récupérer le solde actuel
             $currentBalance = getCurrentBalance();
             
-            // ✅ CALCUL CUMULATIF : Addition au lieu de réinitialisation
+            // CALCUL CUMULATIF : Addition au lieu de réinitialisation
             $newBalance = $currentBalance + $amountToAdd;
             
             // Mettre à jour le solde
@@ -61,7 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_balance'])) {
 }
 
 $currentBalance = getCurrentBalance();
-$isBalanceZero = $currentBalance <= 0; // ✅ Détection solde zéro
 
 // Historique
 $db = getDB();
@@ -112,14 +111,25 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
                     <a href="balance.php" class="text-green-600 dark:text-green-400 font-medium">Gérer Solde</a>
                     
-                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                    <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors" title="Voir les notifications">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <?php if ($unreadCount > 0): ?>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse font-bold">
+                                <?php echo $unreadCount; ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                    
+                    <!-- <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
                         <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                         <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
-                    </button>
+                    </button> -->
                     
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
@@ -146,21 +156,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <?php echo $message; ?>
                 </p>
             </div>
-        <?php endif; ?>
-
-        <!-- ✅ ALERTE SOLDE ZÉRO -->
-        <?php if ($isBalanceZero): ?>
-        <div class="mb-6 p-6 rounded-lg bg-red-100 dark:bg-red-900/30 border-2 border-red-500 animate-pulse">
-            <div class="flex items-center">
-                <svg class="h-8 w-8 text-red-600 dark:text-red-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                <div>
-                    <h3 class="text-lg font-bold text-red-800 dark:text-red-200">⚠️ ALERTE : Solde épuisé !</h3>
-                    <p class="text-red-700 dark:text-red-300 mt-1">Vous devez ajouter des fonds immédiatement pour pouvoir traiter les demandes de sortie.</p>
-                </div>
-            </div>
-        </div>
         <?php endif; ?>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">

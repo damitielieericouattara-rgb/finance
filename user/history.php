@@ -63,18 +63,18 @@ $unreadCount = countUnreadNotifications($user['id']);
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <svg class="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-8 w-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <span class="ml-2 text-xl font-bold text-gray-900 dark:text-white"><?php echo SITE_NAME; ?></span>
                 </div>
                 
                 <div class="hidden md:flex items-center space-x-4">
-                    <a href="dashboard.php" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2">Dashboard</a>
-                    <a href="submit.php" class="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-3 py-2">Nouvelle demande</a>
-                    <a href="history.php" class="text-blue-600 dark:text-blue-400 font-medium px-3 py-2">Historique</a>
+                    <a href="dashboard.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-3 py-2">Dashboard</a>
+                    <a href="submit.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 px-3 py-2">Nouvelle demande</a>
+                    <a href="history.php" class="text-green-600 dark:text-green-400 font-medium px-3 py-2">Historique</a>
                     
-                    <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                    <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
@@ -83,14 +83,14 @@ $unreadCount = countUnreadNotifications($user['id']);
                         <?php endif; ?>
                     </a>
                     
-                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+                    <!-- <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
                         <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                         <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
-                    </button>
+                    </button> -->
                     
                     <div class="flex items-center space-x-2">
                         <div class="text-right">
@@ -135,7 +135,7 @@ $unreadCount = countUnreadNotifications($user['id']);
                     </select>
                 </div>
                 <div class="flex items-end">
-                    <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                         Filtrer
                     </button>
                 </div>
@@ -158,7 +158,7 @@ $unreadCount = countUnreadNotifications($user['id']);
                     <?php if (empty($transactions)): ?>
                     <tr>
                         <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            Aucune transaction. <a href="submit.php" class="text-blue-600 dark:text-blue-400 hover:underline">Créer une demande</a>
+                            Aucune transaction. <a href="submit.php" class="text-green-600 dark:text-green-400 hover:underline">Créer une demande</a>
                         </td>
                     </tr>
                     <?php else: ?>
@@ -168,7 +168,7 @@ $unreadCount = countUnreadNotifications($user['id']);
                                 <?php echo formatDateTime($trans['created_at'], 'd/m/Y H:i'); ?>
                             </td>
                             <td class="px-6 py-4">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $trans['type'] === 'entree' ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'; ?>">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full <?php echo $trans['type'] === 'entree' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'; ?>">
                                     <?php echo $trans['type'] === 'entree' ? 'Entrée' : 'Sortie'; ?>
                                 </span>
                             </td>
@@ -206,7 +206,7 @@ $unreadCount = countUnreadNotifications($user['id']);
         <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Raison du refus</h3>
             <p id="reasonContent" class="text-gray-600 dark:text-gray-400 mb-6"></p>
-            <button onclick="closeModal()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button onclick="closeModal()" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                 Fermer
             </button>
         </div>

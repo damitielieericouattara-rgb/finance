@@ -44,6 +44,9 @@ try {
     ");
     $transactionsByStatus = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     
+    // ✅ Vérifier si le solde est à zéro
+    $isBalanceZero = $currentBalance <= 0;
+    
 } catch (Exception $e) {
     error_log("Erreur dashboard admin: " . $e->getMessage());
     $currentBalance = 0;
@@ -55,6 +58,7 @@ try {
     $activeUsers = 0;
     $recentTransactions = [];
     $transactionsByStatus = [];
+    $isBalanceZero = true;
 }
 
 $unreadCount = countUnreadNotifications($_SESSION['user_id']);
@@ -87,21 +91,22 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                     <a href="reports.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Rapports</a>
                     <a href="balance.php" class="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">Gérer Solde</a>
                     
-                    <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                    <!-- <button id="themeToggle" class="p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
                         <svg class="h-6 w-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
                         </svg>
                         <svg class="h-6 w-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
-                    </button>
+                    </button> -->
                     
-                    <a href="../includes/notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400">
+                    <!-- ✅ LIEN CORRECT : notifications.php dans le dossier admin -->
+                    <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors" title="Voir les notifications">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
                         <?php if ($unreadCount > 0): ?>
-                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse font-bold">
                                 <?php echo $unreadCount; ?>
                             </span>
                         <?php endif; ?>
@@ -128,6 +133,29 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Tableau de bord</h1>
             <p class="text-gray-600 dark:text-gray-400 mt-2">Vue d'ensemble de l'activité financière</p>
         </div>
+
+        <!-- ✅ ALERTE SOLDE ZÉRO - DÉPLACÉE ICI SUR LE DASHBOARD -->
+        <?php if ($isBalanceZero): ?>
+        <div class="mb-6 p-6 rounded-lg bg-red-100 dark:bg-red-900/30 border-2 border-red-500 animate-pulse">
+            <div class="flex items-center">
+                <svg class="h-10 w-10 text-red-600 dark:text-red-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-red-800 dark:text-red-200">⚠️ ALERTE CRITIQUE : Solde épuisé !</h3>
+                    <p class="text-red-700 dark:text-red-300 mt-2 text-lg">
+                        Le solde global est actuellement de <strong class="text-2xl"><?php echo formatAmount($currentBalance); ?></strong>
+                    </p>
+                    <p class="text-red-700 dark:text-red-300 mt-1">
+                        Vous devez ajouter des fonds immédiatement pour pouvoir traiter les demandes de sortie.
+                    </p>
+                    <a href="balance.php" class="inline-block mt-4 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition">
+                        💰 Ajouter des fonds maintenant
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Statistiques principales -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
