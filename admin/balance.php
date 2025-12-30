@@ -281,7 +281,8 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
         </div>
     </div>
 
-    <script src="../assets/js/theme.js"></script>
+    <!-- <script src="../assets/js/theme.js"></script> -->
+    <script src="../assets/js/hamburger.js"></script>
     <script>
     // Calcul en temps réel du nouveau solde
     const amountInput = document.querySelector('input[name="amount_to_add"]');

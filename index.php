@@ -6,7 +6,6 @@
     <title>Gestion Financière - Simplifiez votre gestion financière</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="./assets/css/responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="./assets/css/responsive.css">
 </head>
@@ -369,7 +368,7 @@
     </footer>
     <!-------------------------------------JavaScript----------------------------------->
     
-    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/hamburger.js"></script>
 
 </body>
 </html>

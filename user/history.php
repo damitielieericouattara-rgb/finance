@@ -228,5 +228,6 @@ $unreadCount = countUnreadNotifications($user['id']);
             if (e.key === 'Escape') closeModal();
         });
     </script>
+    <script src="../assets/js/hamburger.js"></script>
 </body>
 </html>

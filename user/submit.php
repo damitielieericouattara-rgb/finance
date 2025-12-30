@@ -202,6 +202,6 @@ $unreadCount = countUnreadNotifications($user['id']);
         </div>
     </main>
 
-    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/hamburger.js"></script>
 </body>
 </html>

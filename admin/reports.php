@@ -333,6 +333,6 @@ if (isset($_POST['export'])) {
             </form>
         </div>
     </div>
-    <script src="../assets/js/theme.js"></script>
+    <script src="../assets/js/hamburger.js"></script>
 </body>
 </html>

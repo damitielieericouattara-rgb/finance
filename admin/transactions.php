@@ -368,5 +368,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
             form.submit();
         }
     </script>
+    <script src="../assets/js/hamburger.js"></script>
 </body>
 </html>
