@@ -71,7 +71,7 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     <title>Dashboard Admin - <?php echo SITE_NAME; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
-    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/responsive2.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
@@ -100,6 +100,8 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
                     </button> -->
+
+
                     
                     <!-- ✅ LIEN CORRECT : notifications.php dans le dossier admin -->
                     <a href="notifications.php" class="relative p-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors" title="Voir les notifications">
@@ -127,6 +129,34 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
                 </div>
             </div>
         </div>
+
+            <!-------------------------------Bouton Hamburger (Mobile)------------------------------>
+            <button id="mobile-menu-btn" class="md:hidden text-gray-700 focus:outline-none p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!---------------------------------Menu Mobile--------------------------->
+    <div id="mobile-menu" class="hidden">
+        <div class="px-4 py-3 space-y-1 bg-white shadow-lg">
+            
+            <a href="" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+                Transactions
+            </a>
+            <a href="#features" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+                Utilisateurs
+            </a>
+            <a href="#about" class="block text-gray-700 hover:text-green-600 hover:bg-gray-50 py-3 px-4 rounded-lg">
+               Rapports
+            </a>
+            <a href="./auth/login.php" class="block bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 text-center mt-2">
+                Se connecter
+            </a>
+        </div>
+    </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
@@ -340,5 +370,6 @@ $unreadCount = countUnreadNotifications($_SESSION['user_id']);
     </div>
 
     <script src="../assets/js/hamburger.js"></script>
+    <script src="../assets/js/responsive.js"></script>
 </body>
 </html>

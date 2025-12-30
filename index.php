@@ -7,7 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="./assets/css/responsive.css">
+    <!-- <link rel="stylesheet" href="./assets/css/responsive.css"> -->
+    <link rel="stylesheet" href="./assets/css/responsive2.css">
 </head>
 <body class="bg-gray-50 font-sans antialiased">
 
@@ -85,7 +86,7 @@
                         Suivez toutes vos transactions, contrôlez votre budget et restez organisé sans effort grâce à notre plateforme intuitive.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                        <a href="./utilisateur/login.html" class="bg-white text-green-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl text-center">
+                        <a href="./auth/login.php" class="bg-white text-green-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-xl text-center">
                            <i class="fas fa-rocket mr-2"></i> Commencer
                         </a>
                         <a href="#features" class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-green-600 transition-all text-center">
@@ -369,6 +370,70 @@
     <!-------------------------------------JavaScript----------------------------------->
     
     <script src="../assets/js/hamburger.js"></script>
+    <script>
+         // Activation/désactivation du menu hamburger
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Défilement fluide des liens de navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                     // Fermeture automatique du menu mobile s'il est ouvert
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+
+        // Ombre de la barre de navigation au défilement 
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('shadow-lg');
+            } else {
+                navbar.classList.remove('shadow-lg');
+            }
+        });
+
+        // fade-in au défilement
+        const fadeInSections = document.querySelectorAll('.fade-in-section');
+        
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '0';
+                    entry.target.style.transform = 'translateY(30px)';
+                    entry.target.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+                    
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, 100);
+                    
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        fadeInSections.forEach(section => {
+            observer.observe(section);
+        });
+    </script>
 
 </body>
 </html>
